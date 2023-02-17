@@ -1,16 +1,14 @@
 use tokio::sync::mpsc::unbounded_channel;
-use std::collections::HashMap;
-use std::fs::File;
 use std::io::{BufReader, BufRead};
 use tokio::net::TcpListener;
 use tokio::{select, signal};
 use std::net::SocketAddr;
+use std::fs::File;
 
-type HostName = String;
-type Port = u16;
+use mp1_node::Config;
 
-fn parse_config(path: &str) -> Result<HashMap<String, (HostName, Port)>, String> {
-    let mut config = HashMap::new();
+fn parse_config(path: &str) -> Result<Config, String> {
+    let mut config = Config::new();
     let mut rdr = match File::open(path) {
         Ok(f) => BufReader::new(f),
         Err(e) => return Err(e.to_string())
