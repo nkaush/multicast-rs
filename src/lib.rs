@@ -1,6 +1,7 @@
 mod multicast;
 mod message;
 mod bank;
+mod cli;
 
 pub use std::collections::HashMap;
 

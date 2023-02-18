@@ -30,3 +30,8 @@ pub struct PriorityMessageType {
     priority: usize,
     message: String
 }
+
+pub enum UserInput {
+    Deposit(String, usize),
+    Transfer(String, String, usize)
+}
