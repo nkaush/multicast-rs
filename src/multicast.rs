@@ -1,4 +1,4 @@
-use crate::message::{ToMulticast, PriorityMessageType, PriorityRequestType, UserInput, FromMulticast};
+use crate::message::{PriorityMessageType, PriorityRequestType, UserInput, FromMulticast};
 use tokio::{sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel}, select};
 use std::collections::BinaryHeap;
 
@@ -7,7 +7,7 @@ use std::net::SocketAddr;
 
 use crate::Config;
 
-struct Multicast {
+pub struct Multicast {
     rcv: UnboundedReceiver<UserInput>,
     pq: BinaryHeap<PriorityMessageType>,
     buf: Vec<PriorityRequestType>,

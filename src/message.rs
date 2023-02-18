@@ -2,10 +2,6 @@ pub struct FromMulticast {
 
 }
 
-pub struct ToMulticast {
-
-}
-
 pub enum NetworkMessage {
     PriorityRequest(PriorityRequestType),
     PriorityProposalType(PriorityProposalType),

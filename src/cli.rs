@@ -1,11 +1,9 @@
 use tokio::sync::mpsc::{UnboundedSender};
-use crate::message::FromMulticast;
 use crate::message::UserInput;
 use std::io;
 
-struct Cli {
+pub struct Cli {
     cli_send: UnboundedSender<UserInput>
-    
 }
 
 impl Cli {
@@ -20,7 +18,7 @@ impl Cli {
             let mut buffer = String::new();
             match io::stdin().read_line(&mut buffer) {
                 Ok(0) | Err(_) => break,
-                Ok(n) => {
+                Ok(_) => {
                     let delimited: Vec <_> = buffer.split_ascii_whitespace().collect();
                     match delimited[0] {
                         "DEPOSIT" => match delimited[2].parse() {

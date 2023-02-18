@@ -2,7 +2,7 @@ use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel};
 use crate::message::FromMulticast;
 use std::collections::BTreeMap;
 
-struct Bank {
+pub struct Bank {
     rcv: UnboundedReceiver<FromMulticast>,
     accounts: BTreeMap<String, usize>
 }
