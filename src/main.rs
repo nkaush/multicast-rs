@@ -24,13 +24,17 @@ fn parse_config(path: &str) -> Result<Config, String> {
     };
 
     buf.clear();
+    let mut nodes = Vec::new();
     while let Ok(n) = rdr.read_line(&mut buf) {
         if n == 0 { break }
 
         let delimited: Vec<_> = buf.split_ascii_whitespace().collect();
         match delimited[0..3] {
             [node_id, hostname, p] => match p.parse() {
-                Ok(port) => config.insert(node_id.into(), (hostname.into(), port)),
+                Ok(port) => {
+                    config.insert(node_id.into(), (hostname.into(), port, nodes.clone()));
+                    nodes.push(node_id.into());
+                },
                 Err(_) => return Err(format!("Bad config: could not parse port for node with id: {}", n))
             },
             _ => return Err("Bad config: too little arguments per line".into())
@@ -62,8 +66,8 @@ async fn main() {
         }
     };
 
-    let port = match config.get(&args[1]) {
-        Some((_, p)) => *p,
+    let (port, to_connect_with) = match config.get(&args[1]) {
+        Some((_, p, to_connect_with)) => (*p, to_connect_with),
         None => {
             eprintln!("Bad config: node identifier is not listed in config file");
             std::process::exit(1);
@@ -81,6 +85,8 @@ async fn main() {
 
     eprintln!("Listening on {:?}...", tcp_listener.local_addr().unwrap());
     eprintln!("Cancel this process with CRTL+C");
+
+    println!("{config:?}")
 
     // let (log_snd, log_rcv) = unbounded_channel();
 

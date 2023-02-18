@@ -7,4 +7,4 @@ pub use std::collections::HashMap;
 pub type HostName = String;
 pub type Port = u16;
 
-pub type Config = HashMap<String, (HostName, Port)>;
+pub type Config = HashMap<String, (HostName, Port, Vec<String>)>;
