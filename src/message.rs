@@ -31,6 +31,7 @@ pub struct PriorityMessageType {
     message: String
 }
 
+#[derive(Debug)]
 pub enum UserInput {
     Deposit(String, usize),
     Transfer(String, String, usize)
