@@ -117,7 +117,10 @@ impl Multicast {
                         let mut member_id = String::new();
                         match stream.read_line(&mut member_id).await {
                             Ok(0) | Err(_) => continue,
-                            Ok(_) => group.admit_member(stream, member_id)
+                            Ok(_) => {
+                                println!("server got {:?}", member_id);
+                                group.admit_member(stream, member_id)
+                            }
                         }
 
                         if group.len() == config.len() { break; }
