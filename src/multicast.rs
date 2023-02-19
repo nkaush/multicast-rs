@@ -67,9 +67,7 @@ impl Multicast {
         let server_addr = format!("{host}:{port}");
         eprintln!("Connecting to {} at {}...", node_id, server_addr);
 
-        let retry_strategy = FixedInterval::from_millis(100)
-            .map(jitter) // add jitter to delays
-            .take(100);    // limit to 100 retries
+        let retry_strategy = FixedInterval::from_millis(100).take(100);    // limit to 100 retries
 
         match Retry::spawn(retry_strategy, || TcpStream::connect(&server_addr)).await {
             Ok(s) => {
