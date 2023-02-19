@@ -1,13 +1,12 @@
 use crate::message::{PriorityMessageType, PriorityRequestType, UserInput, FromMulticast};
 use tokio::{sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel}, select, net::TcpStream, io::AsyncWriteExt};
-use tokio::io::{AsyncBufReadExt, BufStream};
+use tokio::io::{self, AsyncBufReadExt, BufStream};
 use std::collections::BinaryHeap;
 use std::time::Duration;
 
 use std::net::SocketAddr;
 
 use tokio::net::TcpListener;
-use std::str::FromStr;
 
 use crate::Config;
 
@@ -56,14 +55,23 @@ impl Multicast {
         (this, snd)
     }
 
+    async fn retry_connect(ipport: &str) -> io::Result<TcpStream> {
+        loop{
+            match TcpStream::connect(ipport).await {
+                Ok(stream) => return Ok(stream),
+                Err(_) => continue,
+            }
+        }
+    }
+
     async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(BufStream<TcpStream>, String)>) {
         let server_addr = format!("{host}:{port}");
         let timeout = Duration::new(20, 0);
         eprintln!("Connecting to {} at {}...", node_id, server_addr);
 
-        match tokio::time::timeout(timeout, TcpStream::connect(&server_addr)).await.unwrap() {
+        match tokio::time::timeout(timeout, Multicast::retry_connect(&server_addr)).await {
             Ok(s) => {
-                let mut stream = BufStream::new(s);
+                let mut stream = BufStream::new(s.unwrap());
                 eprintln!("Connected to {} at {}!", node_id, server_addr);
 
                 stream.write_all(format!("{}\n", this_node).as_bytes()).await.unwrap();
