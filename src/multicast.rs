@@ -58,23 +58,19 @@ impl Multicast {
 
     async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(BufStream<TcpStream>, String)>) {
         let server_addr = format!("{host}:{port}");
-        let sock_addr = SocketAddr::from_str(&server_addr).unwrap();
         let timeout = Duration::new(20, 0);
+        eprintln!("Connecting to {} at {}...", node_id, server_addr);
 
-        eprintln!("Connecting to {} at {}...", node_id, sock_addr.to_string());
-
-        match std::net::TcpStream::connect_timeout(&sock_addr, timeout) {
+        match tokio::time::timeout(timeout, TcpStream::connect(&server_addr)).await.unwrap() {
             Ok(s) => {
-                let stream = TcpStream::from_std(s).unwrap();
-                let mut stream = BufStream::new(stream);
-
-                eprintln!("Connected to {} at {}!", node_id, sock_addr.to_string());
+                let mut stream = BufStream::new(s);
+                eprintln!("Connected to {} at {}!", node_id, server_addr);
 
                 stream.write_all(format!("{}\n", this_node).as_bytes()).await.unwrap();
                 stream_snd.send((stream, node_id)).unwrap();
             },
             Err(e) => {
-                eprintln!("Failed to connect to {}: {:?}", sock_addr, e);
+                eprintln!("Failed to connect to {}: {:?}", server_addr, e);
                 std::process::exit(1);
             }
         }
