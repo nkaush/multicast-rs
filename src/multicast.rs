@@ -32,6 +32,7 @@ struct MulticastGroup {
 
 impl MulticastGroup {
     fn admit_member(&mut self, stream: BufStream<TcpStream>, member_id: String) {
+        eprintln!("{} joined the group!", member_id);
         self.members.push(MulticastMember { stream, member_id });
     }
 
@@ -60,10 +61,14 @@ impl Multicast {
         let sock_addr = SocketAddr::from_str(&server_addr).unwrap();
         let timeout = Duration::new(20, 0);
 
+        eprintln!("Connecting to {} at {}...", node_id, sock_addr.to_string());
+
         match std::net::TcpStream::connect_timeout(&sock_addr, timeout) {
             Ok(s) => {
                 let stream = TcpStream::from_std(s).unwrap();
                 let mut stream = BufStream::new(stream);
+
+                eprintln!("Connected to {} at {}!", node_id, sock_addr.to_string());
 
                 stream.write_all(format!("{}\n", this_node).as_bytes()).await.unwrap();
                 stream_snd.send((stream, node_id)).unwrap();
