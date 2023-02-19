@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 use tokio::net::TcpListener;
 
 use tokio_retry::Retry;
-use tokio_retry::strategy::{ExponentialBackoff, jitter};
+use tokio_retry::strategy::{FixedInterval, jitter};
 
 async fn action() -> Result<u64, ()> {
     // do some real-world stuff here...
@@ -63,23 +63,13 @@ impl Multicast {
         (this, snd)
     }
 
-    async fn retry_connect(ipport: &str) -> io::Result<TcpStream> {
-        loop {
-            match TcpStream::connect(ipport).await {
-                Ok(stream) => return Ok(stream),
-                Err(_) => continue,
-            }
-        }
-    }
-
     async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(BufStream<TcpStream>, String)>) {
         let server_addr = format!("{host}:{port}");
-        let timeout = Duration::new(20, 0);
         eprintln!("Connecting to {} at {}...", node_id, server_addr);
 
-        let retry_strategy = ExponentialBackoff::from_millis(30)
+        let retry_strategy = FixedInterval::from_millis(100)
             .map(jitter) // add jitter to delays
-            .take(20);    // limit to 20 retries
+            .take(100);    // limit to 100 retries
 
         match Retry::spawn(retry_strategy, || TcpStream::connect(&server_addr)).await {
             Ok(s) => {
