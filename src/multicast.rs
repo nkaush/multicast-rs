@@ -123,6 +123,7 @@ impl Multicast {
                             Ok(0) | Err(_) => continue,
                             Ok(_) => {
                                 println!("server got {:?}", member_id);
+                                member_id = member_id.trim().into();
                                 group.admit_member(stream, member_id)
                             }
                         }
