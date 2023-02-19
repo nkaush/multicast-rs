@@ -77,6 +77,7 @@ impl Multicast {
                 let name_msg = format!("{}\n", this_node);
                 println!("sending {:?} to {}", name_msg, node_id);
                 stream.write_all(name_msg.as_bytes()).await.unwrap();
+                stream.flush().await.unwrap();
                 stream_snd.send((stream, node_id)).unwrap();
             },
             Err(e) => {
