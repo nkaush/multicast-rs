@@ -77,4 +77,5 @@ async fn main() {
     let (multicast, multicast_snd) = Multicast::new(bank_snd);
     let mut cli = Cli::new(multicast_snd);
 
+    multicast.main_loop(args[1].clone(), port, &config, to_connect_with).await
 }

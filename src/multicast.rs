@@ -75,7 +75,7 @@ impl Multicast {
         }
     }
 
-    pub async fn main_loop(&self, this_node: String, port: u16, config: Config, nodes_to_connect_with: Vec<String>) {
+    pub async fn main_loop(&self, this_node: String, port: u16, config: &Config, nodes_to_connect_with: &Vec<String>) {
         let bind_addr: SocketAddr = ([0, 0, 0, 0], port).into();
         let tcp_listener = match TcpListener::bind(bind_addr).await {
             Ok(l) => l,
@@ -92,10 +92,10 @@ impl Multicast {
         let mut group = MulticastGroup::default();
 
         for node in nodes_to_connect_with.into_iter() {
-            let (host, port, _) = config.get(&node).cloned().unwrap();
+            let (host, port, _) = config.get(node).cloned().unwrap();
             let snd_clone = stream_snd.clone();
             let tnc = this_node.clone();
-            tokio::spawn(Multicast::connect_to_node(tnc, node, host, port, snd_clone));
+            tokio::spawn(Multicast::connect_to_node(tnc, node.to_string(), host, port, snd_clone));
         }
         drop(stream_snd);
         
