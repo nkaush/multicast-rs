@@ -1,21 +1,11 @@
 use crate::message::{PriorityMessageType, PriorityRequestType, UserInput, FromMulticast};
-use tokio::{sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel}, select, net::TcpStream, io::AsyncWriteExt};
-use tokio::io::{self, AsyncBufReadExt, BufStream};
+use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufStream};
+use tokio_retry::{Retry, strategy::FixedInterval};
+use tokio::net::{TcpListener, TcpStream};
 use std::collections::BinaryHeap;
-use std::time::Duration;
-
 use std::net::SocketAddr;
-
-use tokio::net::TcpListener;
-
-use tokio_retry::Retry;
-use tokio_retry::strategy::{FixedInterval, jitter};
-
-async fn action() -> Result<u64, ()> {
-    // do some real-world stuff here...
-    Err(())
-}
-
+use tokio::select;
 use crate::Config;
 
 pub struct Multicast {
@@ -67,17 +57,17 @@ impl Multicast {
         let server_addr = format!("{host}:{port}");
         eprintln!("Connecting to {} at {}...", node_id, server_addr);
 
-        let retry_strategy = FixedInterval::from_millis(100).take(100);    // limit to 100 retries
+        let retry_strategy = FixedInterval::from_millis(100).take(100); // limit to 100 retries
 
         match Retry::spawn(retry_strategy, || TcpStream::connect(&server_addr)).await {
             Ok(s) => {
                 let mut stream = BufStream::new(s);
-                eprintln!("Connected to {} at {}!", node_id, server_addr);
+                eprintln!("Connected to {} at {}", node_id, server_addr);
 
                 let name_msg = format!("{}\n", this_node);
-                println!("sending {:?} to {}", name_msg, node_id);
                 stream.write_all(name_msg.as_bytes()).await.unwrap();
                 stream.flush().await.unwrap();
+
                 stream_snd.send((stream, node_id)).unwrap();
             },
             Err(e) => {
@@ -87,8 +77,10 @@ impl Multicast {
         }
     }
 
-    pub async fn main_loop(&self, this_node: String, port: u16, config: &Config, nodes_to_connect_with: &Vec<String>) {
-        let bind_addr: SocketAddr = ([0, 0, 0, 0], port).into();
+    pub async fn main_loop(&self, this_node: String, config: &Config) {
+        let (_, port, to_connect_with) = config.get(&this_node).unwrap();
+
+        let bind_addr: SocketAddr = ([0, 0, 0, 0], *port).into();
         let tcp_listener = match TcpListener::bind(bind_addr).await {
             Ok(l) => l,
             Err(e) => {
@@ -97,13 +89,10 @@ impl Multicast {
             }
         };
 
-        eprintln!("Listening on {:?}...", tcp_listener.local_addr().unwrap());
-        eprintln!("Cancel this process with CRTL+C");
-
         let (stream_snd, mut stream_rcv) = unbounded_channel();
         let mut group = MulticastGroup::default();
 
-        for node in nodes_to_connect_with.into_iter() {
+        for node in to_connect_with.into_iter() {
             let (host, port, _) = config.get(node).cloned().unwrap();
             let snd_clone = stream_snd.clone();
             let tnc = this_node.clone();
@@ -118,32 +107,26 @@ impl Multicast {
                         // TODO maybe we need to do more here
                         let mut stream = BufStream::new(stream);
                         let mut member_id = String::new();
-                        println!("got a client");
                         match stream.read_line(&mut member_id).await {
                             Ok(0) | Err(_) => continue,
-                            Ok(_) => {
-                                println!("server got {:?}", member_id);
-                                member_id = member_id.trim().into();
-                                group.admit_member(stream, member_id)
-                            }
+                            Ok(_) => group.admit_member(stream, member_id.trim().into())
                         }
 
-                        if group.len() == config.len() { break; }
+                        if group.len() == config.len() - 1 { break; }
                     },
                     Err(e) => {
-                        println!("Could not accept client: {:?}", e);
+                        eprintln!("Could not accept client: {:?}", e);
                         continue
                     }
                 },
                 Some((stream, member_id)) = stream_rcv.recv() => {
                     // TODO maybe we need to do more here
                     group.admit_member(stream, member_id);
-
-                    if group.len() == config.len() { break; }
+                    if group.len() == config.len() - 1 { break; }
                 }
             }
         }
 
-        println!("done connecting!")
+        eprintln!("done connecting!")
     }
 }

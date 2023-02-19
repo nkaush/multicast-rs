@@ -63,19 +63,16 @@ async fn main() {
         }
     };
 
-    let (port, to_connect_with) = match config.get(&args[1]) {
-        Some((_, p, to_connect_with)) => (*p, to_connect_with),
-        None => {
-            eprintln!("Bad config: node identifier is not listed in config file");
-            std::process::exit(1);
-        }
-    };
+    if !config.contains_key(&args[1]) {
+        eprintln!("Bad config: node identifier is not listed in config file");
+        std::process::exit(1);
+    }
 
-    println!("{config:?}");
+    let this_node = args[1].clone();
 
     let (bank, bank_snd) = Bank::new();
     let (multicast, multicast_snd) = Multicast::new(bank_snd);
     let mut cli = Cli::new(multicast_snd);
 
-    multicast.main_loop(args[1].clone(), port, &config, to_connect_with).await
+    multicast.main_loop(this_node, &config).await
 }
