@@ -8,6 +8,14 @@ use std::net::SocketAddr;
 
 use tokio::net::TcpListener;
 
+use tokio_retry::Retry;
+use tokio_retry::strategy::{ExponentialBackoff, jitter};
+
+async fn action() -> Result<u64, ()> {
+    // do some real-world stuff here...
+    Err(())
+}
+
 use crate::Config;
 
 pub struct Multicast {
@@ -56,7 +64,7 @@ impl Multicast {
     }
 
     async fn retry_connect(ipport: &str) -> io::Result<TcpStream> {
-        loop{
+        loop {
             match TcpStream::connect(ipport).await {
                 Ok(stream) => return Ok(stream),
                 Err(_) => continue,
@@ -69,12 +77,18 @@ impl Multicast {
         let timeout = Duration::new(20, 0);
         eprintln!("Connecting to {} at {}...", node_id, server_addr);
 
-        match tokio::time::timeout(timeout, Multicast::retry_connect(&server_addr)).await {
+        let retry_strategy = ExponentialBackoff::from_millis(30)
+            .map(jitter) // add jitter to delays
+            .take(20);    // limit to 20 retries
+
+        match Retry::spawn(retry_strategy, || TcpStream::connect(&server_addr)).await {
             Ok(s) => {
-                let mut stream = BufStream::new(s.unwrap());
+                let mut stream = BufStream::new(s);
                 eprintln!("Connected to {} at {}!", node_id, server_addr);
 
-                stream.write_all(format!("{}\n", this_node).as_bytes()).await.unwrap();
+                let name_msg = format!("{}\n", this_node);
+                println!("sending {} to {}", name_msg, node_id);
+                stream.write_all(name_msg.as_bytes()).await.unwrap();
                 stream_snd.send((stream, node_id)).unwrap();
             },
             Err(e) => {
@@ -115,6 +129,7 @@ impl Multicast {
                         // TODO maybe we need to do more here
                         let mut stream = BufStream::new(stream);
                         let mut member_id = String::new();
+                        println!("got a client");
                         match stream.read_line(&mut member_id).await {
                             Ok(0) | Err(_) => continue,
                             Ok(_) => {
