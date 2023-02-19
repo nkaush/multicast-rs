@@ -22,8 +22,8 @@ pub struct PriorityProposalType {
 /// TODO: implement the Ord trait
 #[derive(Ord, PartialOrd, PartialEq, Eq)]
 pub struct PriorityMessageType {
-    proposer: String,
     priority: usize,
+    proposer: String,
     message: String
 }
 

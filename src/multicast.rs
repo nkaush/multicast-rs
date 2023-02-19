@@ -1,9 +1,13 @@
 use crate::message::{PriorityMessageType, PriorityRequestType, UserInput, FromMulticast};
-use tokio::{sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel}, select};
+use tokio::{sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel}, select, net::TcpStream, io::AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, BufStream};
 use std::collections::BinaryHeap;
+use std::time::Duration;
+
+use std::net::SocketAddr;
 
 use tokio::net::TcpListener;
-use std::net::SocketAddr;
+use std::str::FromStr;
 
 use crate::Config;
 
@@ -14,6 +18,26 @@ pub struct Multicast {
     next_local_id: usize,
     next_priority_proposal: usize,
     bank_snd: UnboundedSender<FromMulticast>
+}
+
+struct MulticastMember {
+    stream: BufStream<TcpStream>,
+    member_id: String
+}
+
+#[derive(Default)]
+struct MulticastGroup {
+    members: Vec<MulticastMember>
+}
+
+impl MulticastGroup {
+    fn admit_member(&mut self, stream: BufStream<TcpStream>, member_id: String) {
+        self.members.push(MulticastMember { stream, member_id });
+    }
+
+    fn len(&self) -> usize {
+        self.members.len()
+    }
 }
 
 impl Multicast {
@@ -31,7 +55,27 @@ impl Multicast {
         (this, snd)
     }
 
-    pub async fn main_loop(port: u16, config: Config, nodes_to_connect_with: Vec<String>) {
+    async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(BufStream<TcpStream>, String)>) {
+        let server_addr = format!("{host}:{port}");
+        let sock_addr = SocketAddr::from_str(&server_addr).unwrap();
+        let timeout = Duration::new(20, 0);
+
+        match std::net::TcpStream::connect_timeout(&sock_addr, timeout) {
+            Ok(s) => {
+                let stream = TcpStream::from_std(s).unwrap();
+                let mut stream = BufStream::new(stream);
+
+                stream.write_all(format!("{}\n", this_node).as_bytes()).await.unwrap();
+                stream_snd.send((stream, node_id)).unwrap();
+            },
+            Err(e) => {
+                eprintln!("Failed to connect to {}: {:?}", sock_addr, e);
+                std::process::exit(1);
+            }
+        }
+    }
+
+    pub async fn main_loop(&self, this_node: String, port: u16, config: Config, nodes_to_connect_with: Vec<String>) {
         let bind_addr: SocketAddr = ([0, 0, 0, 0], port).into();
         let tcp_listener = match TcpListener::bind(bind_addr).await {
             Ok(l) => l,
@@ -44,10 +88,45 @@ impl Multicast {
         eprintln!("Listening on {:?}...", tcp_listener.local_addr().unwrap());
         eprintln!("Cancel this process with CRTL+C");
 
-        loop {
-            // select! {
-            //     _ = async move => ()
-            // }
+        let (stream_snd, mut stream_rcv) = unbounded_channel();
+        let mut group = MulticastGroup::default();
+
+        for node in nodes_to_connect_with.into_iter() {
+            let (host, port, _) = config.get(&node).cloned().unwrap();
+            let snd_clone = stream_snd.clone();
+            let tnc = this_node.clone();
+            tokio::spawn(Multicast::connect_to_node(tnc, node, host, port, snd_clone));
         }
+        drop(stream_snd);
+        
+        loop {
+            select! {
+                client = tcp_listener.accept() => match client {
+                    Ok((stream, _addr)) => {
+                        // TODO maybe we need to do more here
+                        let mut stream = BufStream::new(stream);
+                        let mut member_id = String::new();
+                        match stream.read_line(&mut member_id).await {
+                            Ok(0) | Err(_) => continue,
+                            Ok(_) => group.admit_member(stream, member_id)
+                        }
+
+                        if group.len() == config.len() { break; }
+                    },
+                    Err(e) => {
+                        println!("Could not accept client: {:?}", e);
+                        continue
+                    }
+                },
+                Some((stream, member_id)) = stream_rcv.recv() => {
+                    // TODO maybe we need to do more here
+                    group.admit_member(stream, member_id);
+
+                    if group.len() == config.len() { break; }
+                }
+            }
+        }
+
+        println!("done connecting!")
     }
 }

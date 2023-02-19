@@ -75,5 +75,6 @@ async fn main() {
 
     let (bank, bank_snd) = Bank::new();
     let (multicast, multicast_snd) = Multicast::new(bank_snd);
-    let cli = Cli::new(multicast_snd);
+    let mut cli = Cli::new(multicast_snd);
+
 }
