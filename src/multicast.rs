@@ -1,4 +1,4 @@
-use crate::message::{NetworkMessage, PriorityMessageType, PriorityRequestType, UserInput};
+use crate::{message::{NetworkMessage, PriorityMessageType, PriorityRequestType, UserInput}, write_to_socket, read_from_socket};
 use tokio::{
     sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel},
     io::{AsyncBufReadExt, AsyncWriteExt, BufStream},
@@ -30,7 +30,7 @@ struct MulticastMemberHandle {
 
 struct MulticastMemberData {
     member_id: String,
-    socket: BufStream<TcpStream>, 
+    socket: TcpStream, 
     to_engine: UnboundedSender<ClientStateMessage>,
     from_engine: UnboundedReceiver<NetworkMessage>
 }
@@ -86,7 +86,7 @@ impl Multicast {
         (this, to_multicast)
     }
 
-    pub fn admit_member(&mut self, socket: BufStream<TcpStream>, member_id: String) {
+    pub fn admit_member(&mut self, socket: TcpStream, member_id: String) {
         eprintln!("{} joined the group!", member_id);
 
         let (to_client, from_engine) = unbounded_channel();
@@ -105,21 +105,17 @@ impl Multicast {
         });
     }
 
-    async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(BufStream<TcpStream>, String)>) {
+    async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(TcpStream, String)>) {
         let server_addr = format!("{host}:{port}");
         eprintln!("Connecting to {} at {}...", node_id, server_addr);
 
         let retry_strategy = FixedInterval::from_millis(100).take(100); // limit to 100 retries
 
         match Retry::spawn(retry_strategy, || TcpStream::connect(&server_addr)).await {
-            Ok(s) => {
-                let mut stream = BufStream::new(s);
+            Ok(mut stream) => {
                 eprintln!("Connected to {} at {}", node_id, server_addr);
 
-                let name_msg = format!("{}\n", this_node);
-                stream.write_all(name_msg.as_bytes()).await.unwrap();
-                stream.flush().await.unwrap();
-
+                write_to_socket(&mut stream, this_node).await.unwrap();
                 stream_snd.send((stream, node_id)).unwrap();
             },
             Err(e) => {
@@ -154,12 +150,10 @@ impl Multicast {
         loop {
             select! {
                 client = tcp_listener.accept() => match client {
-                    Ok((stream, _addr)) => { // TODO maybe we need to do more here
-                        let mut stream = BufStream::new(stream);
-                        let mut member_id = String::new();
-                        match stream.read_line(&mut member_id).await {
-                            Ok(0) | Err(_) => continue,
-                            Ok(_) => self.admit_member(stream, member_id.trim().into())
+                    Ok((mut socket, _addr)) => { // TODO maybe we need to do more here
+                        match read_from_socket(&mut socket).await {
+                            Ok(member_id) => self.admit_member(socket, member_id),
+                            Err(_) => continue
                         }
 
                         if self.group.len() == config.len() - 1 { break; }
