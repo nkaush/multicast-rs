@@ -1,5 +1,6 @@
 use serde::{Serialize, Deserialize};
 use core::cmp::Ordering;
+// use std::cmp::Ordering;
 
 pub enum NetworkMessage {
     PriorityRequest(PriorityRequestType),
@@ -19,12 +20,22 @@ pub struct PriorityProposalType {
 }
 
 /// TODO: https://doc.rust-lang.org/stable/std/cmp/trait.Ord.html#how-can-i-implement-ord
-#[derive(Ord, PartialOrd, PartialEq, Eq)]
+#[derive( PartialOrd, PartialEq, Eq)]
 pub struct PriorityMessageType {
     priority: usize,
     proposer: String,
     message: String
 }
+
+impl Ord for PriorityMessageType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.priority.cmp(&other.priority) {
+            Ordering::Equal => self.proposer.cmp(&other.proposer),
+            x => x
+        }
+    }
+}
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum UserInput {
