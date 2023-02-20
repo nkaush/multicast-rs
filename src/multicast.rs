@@ -115,7 +115,8 @@ impl Multicast {
             Ok(mut stream) => {
                 eprintln!("Connected to {} at {}", node_id, server_addr);
 
-                write_to_socket(&mut stream, this_node).await.unwrap();
+                let name_msg = NetworkMessage::NameMessage(this_node);
+                write_to_socket(&mut stream, name_msg).await.unwrap();
                 stream_snd.send((stream, node_id)).unwrap();
             },
             Err(e) => {
@@ -152,7 +153,9 @@ impl Multicast {
                 client = tcp_listener.accept() => match client {
                     Ok((mut socket, _addr)) => { // TODO maybe we need to do more here
                         match read_from_socket(&mut socket).await {
-                            Ok(member_id) => self.admit_member(socket, member_id),
+                            Ok(network_msg) => if let NetworkMessage::NameMessage(member_id) = network_msg {
+                                self.admit_member(socket, member_id)
+                            },
                             Err(_) => continue
                         }
 
