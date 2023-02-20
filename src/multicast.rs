@@ -128,7 +128,7 @@ impl Multicast {
 
                 let name_msg = NetworkMessage::NameMessage(this_node);
                 let to_send = Bytes::from(bincode::serialize(&name_msg).unwrap());
-                framed_write.send(to_send);
+                framed_write.send(to_send).await.unwrap();
 
                 stream_snd.send((socket, node_id)).unwrap();
             },
@@ -169,8 +169,9 @@ impl Multicast {
                         let mut framed_read = LengthDelimitedCodec::builder()
                             .length_field_type::<u32>()
                             .new_read(read_half);
-
+                        eprintln!("got a client");
                         if let Some(msg) = framed_read.next().await {
+                            println!("got frame");
                             match bincode::deserialize::<NetworkMessage>(&msg.unwrap()).unwrap() {
                                 NetworkMessage::NameMessage(member_id) => self.admit_member(socket, member_id),
                                 _ => ()
