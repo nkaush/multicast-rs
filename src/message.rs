@@ -1,6 +1,5 @@
-pub struct FromMulticast {
-
-}
+use serde::{Serialize, Deserialize};
+use core::cmp::Ordering;
 
 pub enum NetworkMessage {
     PriorityRequest(PriorityRequestType),
@@ -19,7 +18,7 @@ pub struct PriorityProposalType {
     priority: usize
 }
 
-/// TODO: implement the Ord trait
+/// TODO: https://doc.rust-lang.org/stable/std/cmp/trait.Ord.html#how-can-i-implement-ord
 #[derive(Ord, PartialOrd, PartialEq, Eq)]
 pub struct PriorityMessageType {
     priority: usize,
@@ -27,7 +26,7 @@ pub struct PriorityMessageType {
     message: String
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum UserInput {
     Deposit(String, usize),
     Transfer(String, String, usize)

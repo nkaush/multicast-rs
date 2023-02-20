@@ -68,11 +68,11 @@ async fn main() {
         std::process::exit(1);
     }
 
-    let this_node = args[1].clone();
+    let node_id = args[1].clone();
 
     let (bank, bank_snd) = Bank::new();
-    let (multicast, multicast_snd) = Multicast::new(bank_snd);
+    let (mut multicast, multicast_snd) = Multicast::new(node_id, bank_snd);
     let mut cli = Cli::new(multicast_snd);
 
-    multicast.main_loop(this_node, &config).await
+    multicast.main_loop(&config).await
 }
