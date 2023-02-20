@@ -1,14 +1,19 @@
 use crate::{message::{NetworkMessage, PriorityMessageType, PriorityRequestType, UserInput}, write_to_socket, read_from_socket};
+use bytes::Bytes;
 use tokio::{
     sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel},
     io::{AsyncBufReadExt, AsyncWriteExt, BufStream},
-    net::{TcpListener, TcpStream},
+    net::{TcpListener, TcpStream, tcp::{ReadHalf, WriteHalf}},
     task::JoinHandle, select
 };
+use tokio_util::codec::{FramedRead, Framed, LengthDelimitedCodec, FramedWrite};
 use tokio_retry::{Retry, strategy::FixedInterval};
+use tokio::io::{AsyncRead, AsyncWrite};
 use std::collections::{HashMap, BinaryHeap};
 use std::net::SocketAddr;
 use crate::Config;
+use tokio_util::codec::Decoder;
+use futures::{sink::SinkExt, StreamExt};
 
 /// Represents any message types a member handler thread could send the multicast engine
 enum ClientStateMessageType {
@@ -30,7 +35,7 @@ struct MulticastMemberHandle {
 
 struct MulticastMemberData {
     member_id: String,
-    socket: BufStream<TcpStream>, 
+    socket: TcpStream, 
     to_engine: UnboundedSender<ClientStateMessage>,
     from_engine: UnboundedReceiver<NetworkMessage>
 }
@@ -86,7 +91,7 @@ impl Multicast {
         (this, to_multicast)
     }
 
-    pub fn admit_member(&mut self, socket: BufStream<TcpStream>, member_id: String) {
+    pub fn admit_member(&mut self, socket: TcpStream, member_id: String) {
         eprintln!("{} joined the group!", member_id);
 
         let (to_client, from_engine) = unbounded_channel();
@@ -105,20 +110,27 @@ impl Multicast {
         });
     }
 
-    async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(BufStream<TcpStream>, String)>) {
+    async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(TcpStream, String)>) {
         let server_addr = format!("{host}:{port}");
         eprintln!("Connecting to {} at {}...", node_id, server_addr);
 
         let retry_strategy = FixedInterval::from_millis(100).take(100); // limit to 100 retries
 
         match Retry::spawn(retry_strategy, || TcpStream::connect(&server_addr)).await {
-            Ok(stream) => {
+            Ok(mut socket) => {
                 eprintln!("Connected to {} at {}", node_id, server_addr);
-                let mut stream = BufStream::new(stream);
+                // let mut stream = BufStream::new(stream);
+        
+                let (_, write_half) = socket.split();
+                let mut framed_write = LengthDelimitedCodec::builder()
+                    .length_field_type::<u32>()
+                    .new_write(write_half);
 
                 let name_msg = NetworkMessage::NameMessage(this_node);
-                write_to_socket(&mut stream, name_msg).await.unwrap();
-                stream_snd.send((stream, node_id)).unwrap();
+                let to_send = Bytes::from(bincode::serialize(&name_msg).unwrap());
+                framed_write.send(to_send);
+
+                stream_snd.send((socket, node_id)).unwrap();
             },
             Err(e) => {
                 eprintln!("Failed to connect to {}: {:?}", server_addr, e);
@@ -152,13 +164,17 @@ impl Multicast {
         loop {
             select! {
                 client = tcp_listener.accept() => match client {
-                    Ok((socket, _addr)) => { // TODO maybe we need to do more here
-                        let mut socket = BufStream::new(socket);
-                        match read_from_socket(&mut socket).await {
-                            Ok(network_msg) => if let NetworkMessage::NameMessage(member_id) = network_msg {
-                                self.admit_member(socket, member_id)
-                            },
-                            Err(_) => continue
+                    Ok((mut socket, _addr)) => { // TODO maybe we need to do more here
+                        let (read_half, _) = socket.split();
+                        let mut framed_read = LengthDelimitedCodec::builder()
+                            .length_field_type::<u32>()
+                            .new_read(read_half);
+
+                        if let Some(msg) = framed_read.next().await {
+                            match bincode::deserialize::<NetworkMessage>(&msg.unwrap()).unwrap() {
+                                NetworkMessage::NameMessage(member_id) => self.admit_member(socket, member_id),
+                                _ => ()
+                            }
                         }
 
                         if self.group.len() == config.len() - 1 { break; }
