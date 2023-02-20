@@ -30,7 +30,7 @@ struct MulticastMemberHandle {
 
 struct MulticastMemberData {
     member_id: String,
-    socket: TcpStream, 
+    socket: BufStream<TcpStream>, 
     to_engine: UnboundedSender<ClientStateMessage>,
     from_engine: UnboundedReceiver<NetworkMessage>
 }
@@ -86,7 +86,7 @@ impl Multicast {
         (this, to_multicast)
     }
 
-    pub fn admit_member(&mut self, socket: TcpStream, member_id: String) {
+    pub fn admit_member(&mut self, socket: BufStream<TcpStream>, member_id: String) {
         eprintln!("{} joined the group!", member_id);
 
         let (to_client, from_engine) = unbounded_channel();
@@ -105,15 +105,16 @@ impl Multicast {
         });
     }
 
-    async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(TcpStream, String)>) {
+    async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(BufStream<TcpStream>, String)>) {
         let server_addr = format!("{host}:{port}");
         eprintln!("Connecting to {} at {}...", node_id, server_addr);
 
         let retry_strategy = FixedInterval::from_millis(100).take(100); // limit to 100 retries
 
         match Retry::spawn(retry_strategy, || TcpStream::connect(&server_addr)).await {
-            Ok(mut stream) => {
+            Ok(stream) => {
                 eprintln!("Connected to {} at {}", node_id, server_addr);
+                let mut stream = BufStream::new(stream);
 
                 let name_msg = NetworkMessage::NameMessage(this_node);
                 write_to_socket(&mut stream, name_msg).await.unwrap();
@@ -151,7 +152,8 @@ impl Multicast {
         loop {
             select! {
                 client = tcp_listener.accept() => match client {
-                    Ok((mut socket, _addr)) => { // TODO maybe we need to do more here
+                    Ok((socket, _addr)) => { // TODO maybe we need to do more here
+                        let mut socket = BufStream::new(socket);
                         match read_from_socket(&mut socket).await {
                             Ok(network_msg) => if let NetworkMessage::NameMessage(member_id) = network_msg {
                                 self.admit_member(socket, member_id)
