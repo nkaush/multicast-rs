@@ -108,11 +108,19 @@ impl Multicast {
     }
 
     pub async fn main_loop(&mut self) { 
+        println!("starting main loop");
         loop {
+            println!("main loop iteration");
             select! {
                 input = self.from_cli.recv() => match input {
-                    Some(msg) => self.request_priority(msg),
-                    None => break
+                    Some(msg) => {
+                        println!("got {:?} from cli", msg);
+                        self.request_priority(msg)
+                    },
+                    None => {
+                        println!("from_cli channel closed");
+                        break
+                    }
                 },
                 Some(msg) = self.from_clients.recv() => match msg.msg {
                     ClientStateMessageType::Message(m) => {
