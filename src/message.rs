@@ -1,8 +1,7 @@
 use serde::{Serialize, Deserialize};
 use core::cmp::Ordering;
-// use std::cmp::Ordering;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum NetworkMessage {
     PriorityRequest(PriorityRequestType),
     PriorityProposal(PriorityProposalType),
@@ -10,25 +9,25 @@ pub enum NetworkMessage {
     NameMessage(String)
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PriorityRequestType {
-    sender: String,
-    local_id: usize
+    pub sender: String,
+    pub local_id: usize
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PriorityProposalType {
-    proposer: String,
-    local_id: usize,
-    priority: usize
+    pub proposer: String,
+    pub local_id: usize,
+    pub priority: usize
 }
 
 /// TODO: https://doc.rust-lang.org/stable/std/cmp/trait.Ord.html#how-can-i-implement-ord
-#[derive( PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PriorityMessageType {
-    priority: usize,
-    proposer: String,
-    message: String
+    pub priority: usize,
+    pub proposer: String,
+    pub message: UserInput
 }
 
 impl Ord for PriorityMessageType {
@@ -40,8 +39,24 @@ impl Ord for PriorityMessageType {
     }
 }
 
+impl PartialOrd for PriorityMessageType {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match self.priority.cmp(&other.priority) {
+            Ordering::Equal => Some(self.proposer.cmp(&other.proposer)),
+            x => Some(x)
+        }
+    }
+}
 
-#[derive(Debug, Serialize, Deserialize)]
+impl PartialEq for PriorityMessageType {
+    fn eq(&self, other: &Self) -> bool {
+        self.priority == other.priority && self.proposer == other.proposer
+    }
+}
+
+impl Eq for PriorityMessageType {}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum UserInput {
     Deposit(String, usize),
     Transfer(String, String, usize)

@@ -34,7 +34,6 @@ pub async fn multicast_connection(mut accounts:BTreeMap<String, usize>, mut rcv:
                 account1 = person;
                 amount = amt;
             }
-
             UserInput::Transfer(person1, person2, amt) => {
                 transaction_type = 1;
                 account1 = person1;
