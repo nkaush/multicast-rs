@@ -71,8 +71,8 @@ async fn main() {
     let node_id = args[1].clone();
 
     let (bank, bank_snd) = Bank::new();
-    let (mut multicast, multicast_snd) = Multicast::new(node_id, bank_snd);
+    let (mut multicast, multicast_snd) = Multicast::new(node_id, &config, bank_snd).await;
     let mut cli = Cli::new(multicast_snd);
 
-    multicast.main_loop(&config).await
+    multicast.main_loop().await
 }
