@@ -5,8 +5,7 @@ use core::cmp::Ordering;
 pub enum NetworkMessage {
     PriorityRequest(PriorityRequestType),
     PriorityProposal(PriorityProposalType),
-    PriorityMessage(PriorityMessageType),
-    NameMessage(String)
+    PriorityMessage(PriorityMessageType)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

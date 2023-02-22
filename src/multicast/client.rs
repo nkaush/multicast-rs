@@ -1,12 +1,7 @@
-use crate::NetworkMessage;
-
-use super::{ClientStateMessage, ClientStateMessageType};
+use super::{ClientStateMessage, ClientStateMessageType, MulticastMemberData};
 use tokio_util::codec::LengthDelimitedCodec;
 use futures::{stream::StreamExt, SinkExt};
-
-use super::MulticastMemberData;
 use tokio::select;
-use bytes::Bytes;
 
 pub(in crate::multicast) async fn client_loop(mut member_data: MulticastMemberData) {
     let (read, write) = member_data.socket.into_split();
@@ -22,9 +17,8 @@ pub(in crate::multicast) async fn client_loop(mut member_data: MulticastMemberDa
     loop {
         select! {
             Some(to_send) = member_data.from_engine.recv() => {
-                let bytes = Bytes::from(bincode::serialize(&to_send).unwrap());
-                
-                if write.send(bytes).await.is_err() {
+                let bytes = bincode::serialize(&to_send).unwrap();
+                if write.send(bytes.into()).await.is_err() {
                     member_data.to_engine.send(ClientStateMessage {
                         msg: ClientStateMessageType::NetworkError,
                         member_id: member_data.member_id.clone()

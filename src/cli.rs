@@ -1,5 +1,6 @@
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio::sync::mpsc::{UnboundedSender};
+use futures::stream::StreamExt;
 use crate::message::UserInput;
 
 pub struct Cli {
@@ -14,13 +15,12 @@ impl Cli {
     }
 
     pub async fn taking_input(&mut self) {
-        let mut reader = BufReader::new(tokio::io::stdin());
-        loop {
-            let mut buffer = String::new();
-            match reader.read_line(&mut buffer).await {
-                Ok(0) | Err(_) => break,
-                Ok(_) => {
-                    let delimited: Vec <_> = buffer
+        let mut stdin = FramedRead::new(tokio::io::stdin(), LinesCodec::new());
+        while let Some(buffer) = stdin.next().await {
+            match buffer {
+                Err(_) => break,
+                Ok(line) => {
+                    let delimited: Vec <_> = line
                         .trim()
                         .split_ascii_whitespace()
                         .collect();
@@ -52,7 +52,6 @@ impl Cli {
                 }
             }
         }
-
     }
 }
 
