@@ -1,11 +1,10 @@
-use super::{ClientStateMessage, ClientStateMessageType, MulticastMemberData};
+use super::{MemberStateMessageType, MulticastMemberData};
 use tokio_util::codec::LengthDelimitedCodec;
 use futures::{stream::StreamExt, SinkExt};
-use tokio::select;
+use tokio::{net::TcpStream, select};
 
-pub(in crate::multicast) async fn client_loop(mut member_data: MulticastMemberData) {
-    let (read, write) = member_data.socket.into_split();
-
+pub(super) async fn member_loop(socket: TcpStream, mut member_data: MulticastMemberData) {
+    let (read, write) = socket.into_split();
     let mut write = LengthDelimitedCodec::builder()
         .length_field_type::<u32>()
         .new_write(write);
@@ -19,32 +18,23 @@ pub(in crate::multicast) async fn client_loop(mut member_data: MulticastMemberDa
             Some(to_send) = member_data.from_engine.recv() => {
                 let bytes = bincode::serialize(&to_send).unwrap();
                 if write.send(bytes.into()).await.is_err() {
-                    member_data.to_engine.send(ClientStateMessage {
-                        msg: ClientStateMessageType::NetworkError,
-                        member_id: member_data.member_id.clone()
-                    }).unwrap();
+                    member_data.notify_network_error().unwrap();
                 }
             },
             Some(received) = read.next() => {
                 match received {
                     Ok(bytes) => {
                         let msg = match bincode::deserialize(&bytes) {
-                            Ok(m) => ClientStateMessageType::Message(m),
+                            Ok(m) => MemberStateMessageType::Message(m),
                             Err(e) => {
                                 eprintln!("deserialize error on client handler {}: {:?}", member_data.member_id, e);
                                 continue
                             }
                         };
-                        member_data.to_engine.send(ClientStateMessage {
-                            msg,
-                            member_id: member_data.member_id.clone()
-                        }).unwrap();
+                        member_data.notify_client_message(msg).unwrap();
                     },
                     Err(_) => {
-                        member_data.to_engine.send(ClientStateMessage {
-                            msg: ClientStateMessageType::NetworkError,
-                            member_id: member_data.member_id.clone()
-                        }).unwrap();
+                        member_data.notify_network_error().unwrap();
                     }
                 }
             }
