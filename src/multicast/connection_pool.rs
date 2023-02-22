@@ -73,7 +73,7 @@ impl ConnectionPool {
         });
     }
 
-    pub(super) async fn connect(&mut self, config: &Config) {
+    pub(super) async fn connect(mut self, config: &Config) -> Self {
         let (_, port, to_connect_with) = config.get(&self.node_id).unwrap();
 
         let bind_addr: SocketAddr = ([0, 0, 0, 0], *port).into();
@@ -106,7 +106,7 @@ impl ConnectionPool {
                             Ok(_) => self.admit_member(stream.into_inner(), member_id.trim().into())
                         }
 
-                        if self.group.len() == config.len() - 1 { break; }
+                        if self.group.len() == config.len() - 1 { break self; }
                     },
                     Err(e) => {
                         eprintln!("Could not accept client: {:?}", e);
@@ -115,7 +115,7 @@ impl ConnectionPool {
                 },
                 Some((stream, member_id)) = stream_rcv.recv() => { // TODO maybe we need to do more here
                     self.admit_member(stream, member_id);
-                    if self.group.len() == config.len() - 1 { break; }
+                    if self.group.len() == config.len() - 1 { break self; }
                 }
             }
         } 

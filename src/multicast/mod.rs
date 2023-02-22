@@ -99,10 +99,11 @@ impl Multicast {
     pub async fn new(node_id: String, config: &Config, bank_snd: UnboundedSender<UserInput>) -> (Self, UnboundedSender<UserInput>) {
         let (to_multicast, from_cli) = unbounded_channel();
 
-        let mut pool = ConnectionPool::new(node_id.clone());
-        pool.connect(config).await;
+        let (group, from_clients) = ConnectionPool::new(node_id.clone())
+            .connect(config)
+            .await
+            .consume();
         eprintln!("done connecting!");
-        let (group, from_clients) = pool.consume();
 
         let this = Self {
             node_id,
