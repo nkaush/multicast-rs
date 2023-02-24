@@ -1,12 +1,10 @@
 mod connection_pool;
-mod client;
+mod member;
 
 use crate::message::{NetworkMessage, PriorityMessageType, PriorityRequestType, UserInput};
 use tokio::{
     sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel},
-    io::{AsyncBufReadExt, AsyncWriteExt, BufStream},
-    net::{TcpListener, TcpStream},
-    task::JoinHandle, select
+    sync::mpsc::error::SendError, task::JoinHandle, select
 };
 use std::collections::{HashMap, BinaryHeap};
 use crate::Config;
@@ -14,28 +12,64 @@ use crate::Config;
 use connection_pool::ConnectionPool;
 
 /// Represents any message types a member handler thread could send the multicast engine
-enum ClientStateMessageType {
+#[derive(Debug)]
+enum MemberStateMessageType {
     Message(NetworkMessage),
     NetworkError
 }
 
-/// Represents any messages a member handler thread could send the multicast engine
-struct ClientStateMessage {
-    msg: ClientStateMessageType,
+/// Represents any messages a member handler thread could send the multicast engine.
+#[derive(Debug)]
+struct MemberStateMessage {
+    msg: MemberStateMessageType,
     member_id: String
 }
 
+/// The handle that the multicast engine has for each member handler thread.
 struct MulticastMemberHandle {
     member_id: String,
     to_client: UnboundedSender<NetworkMessage>,
     handle: JoinHandle<()>
 }
 
+impl MulticastMemberHandle {
+    fn pass_message(&self, msg: NetworkMessage) -> Result<(), SendError<NetworkMessage>> {
+        self.to_client.send(msg)
+    }
+
+    fn abort(&self) {
+        self.handle.abort()
+    }
+}
+
+impl Drop for MulticastMemberHandle {
+    fn drop(&mut self) {
+        eprintln!("Aborting client thread for {}", self.member_id);
+        self.abort()
+    }
+}
+
 struct MulticastMemberData {
     member_id: String,
-    socket: TcpStream, 
-    to_engine: UnboundedSender<ClientStateMessage>,
+    to_engine: UnboundedSender<MemberStateMessage>,
     from_engine: UnboundedReceiver<NetworkMessage>
+}
+
+impl MulticastMemberData {
+    pub fn generate_state_msg(&self, msg: MemberStateMessageType) -> MemberStateMessage {
+        MemberStateMessage {
+            msg,
+            member_id: self.member_id.clone()
+        }
+    }
+    
+    fn notify_client_message(&mut self, msg: MemberStateMessageType) -> Result<(), SendError<MemberStateMessage>> {
+        self.to_engine.send(self.generate_state_msg(msg))
+    }
+
+    fn notify_network_error(&mut self) -> Result<(), SendError<MemberStateMessage>> {
+        self.to_engine.send(self.generate_state_msg(MemberStateMessageType::NetworkError))
+    }
 }
 
 pub struct Multicast {
@@ -45,6 +79,8 @@ pub struct Multicast {
     buf: Vec<PriorityRequestType>,
     next_local_id: usize,
     next_priority_proposal: usize,
+
+    local_messages: HashMap<usize, UserInput>,
 
     /// Stores all of the multicast group member thread handles
     group: HashMap<String, MulticastMemberHandle>,
@@ -56,17 +92,18 @@ pub struct Multicast {
     to_bank: UnboundedSender<UserInput>,
 
     /// Receive handle for client handling threads to send multicast engine any messages
-    from_clients: UnboundedReceiver<ClientStateMessage>,
+    from_clients: UnboundedReceiver<MemberStateMessage>,
 }
 
 impl Multicast {
     pub async fn new(node_id: String, config: &Config, bank_snd: UnboundedSender<UserInput>) -> (Self, UnboundedSender<UserInput>) {
         let (to_multicast, from_cli) = unbounded_channel();
 
-        let mut pool = ConnectionPool::new(node_id.clone());
-        pool.connect(config).await;
+        let (group, from_clients) = ConnectionPool::new(node_id.clone())
+            .connect(config)
+            .await
+            .consume();
         eprintln!("done connecting!");
-        let (group, from_clients) = pool.take_resources();
 
         let this = Self {
             node_id,
@@ -76,6 +113,7 @@ impl Multicast {
             buf: Vec::new(),
             next_local_id: 0,
             next_priority_proposal: 0,
+            local_messages: HashMap::new(),
             to_bank: bank_snd,
             from_clients
         };
@@ -83,19 +121,54 @@ impl Multicast {
         (this, to_multicast)
     }
 
+    fn get_local_id(&mut self) -> usize {
+        let id = self.next_local_id;
+        self.next_local_id += 1;
+        id
+    }
+
+    /// We got some input from the CLI, now we want to request a priority for it.
+    fn request_priority(&mut self, msg: UserInput) {
+        todo!();
+    }
+
+    /// We got a request from another process for priority, so propose a priority.
+    fn propose_priority(&mut self) {
+        todo!();
+    }
+
+    /// We got all the priorities for our message back, so send out the 
+    /// confirmed priority along with the message.
+    fn confirm_message_priority(&mut self) {
+        todo!();
+    }
+
     pub async fn main_loop(&mut self) { 
         loop {
             select! {
                 input = self.from_cli.recv() => match input {
                     Some(msg) => {
-                        // for member in self.group.iter_mut() {
-                        //     let serialized = bincode::serialize(&msg).unwrap();
-                        //     let len = serialized.len() as u64;
-                        //     member.stream.write_u64_le(len).await.unwrap();
-                        //     // member.stream.
-                        // }
+                        self.request_priority(msg)
                     },
-                    None => break
+                    None => {
+                        println!("from_cli channel closed");
+                        break
+                    }
+                },
+                Some(msg) = self.from_clients.recv() => match msg.msg {
+                    MemberStateMessageType::Message(net_msg) => {
+                        eprintln!("Got network message from {}: {:?}", msg.member_id, net_msg);
+                        match net_msg {
+                            NetworkMessage::PriorityRequest(m) => println!("{:?}", m),
+                            NetworkMessage::PriorityProposal(_) => todo!(),
+                            NetworkMessage::PriorityMessage(_) => todo!()
+                        }
+                    },
+                    MemberStateMessageType::NetworkError => {
+                        // remove the client from the group if it encounters a network error
+                        // TODO: do we need to notify other clients that this client has died?
+                        self.group.remove(&msg.member_id);
+                    }
                 }
             }
         }

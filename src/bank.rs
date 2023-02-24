@@ -49,7 +49,7 @@ impl Bank {
             if self.accounts.get(&account1) != None {
                 match self.accounts.get(&account1) {
                     Some(amount) => {
-                        
+
                     }
                     None => {
 

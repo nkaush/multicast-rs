@@ -1,5 +1,5 @@
 use std::io::{BufReader, BufRead};
-use tokio::{select, signal};
+use tokio::{join, signal};
 use std::fs::File;
 
 use mp1_node::{Bank, Cli, Config, Multicast};
@@ -74,5 +74,8 @@ async fn main() {
     let (mut multicast, multicast_snd) = Multicast::new(node_id, &config, bank_snd).await;
     let mut cli = Cli::new(multicast_snd);
 
-    multicast.main_loop().await
+    join! {
+        cli.taking_input(),
+        multicast.main_loop()
+    };
 }
