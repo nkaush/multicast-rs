@@ -24,14 +24,25 @@ impl Bank {
         while let Some(sample) = self.rcv.recv().await {
             match sample {
                 UserInput::Deposit(person, amt) => {
-                    self.accounts.entry(person).and_modify(|curr| *curr += amt).or_insert(amt);
+                    self.accounts.entry(person).and_modify(|curr| *curr += amt).or_insert(amt); 
+                    print!("BALANCES: ");
+                    for (account, balance) in &self.accounts {
+                        print!("{account}: {balance}\t");
+                    }
+                    println!("\n");
                 }
     
                 UserInput::Transfer(person1, person2, amt) => {
-                    match (self.accounts.get(&person1)) {
+                    match self.accounts.get(&person1) {
                         Some(balance1) => if balance1 >= &amt { 
                             self.accounts.entry(person1).and_modify(|curr| *curr -= amt);
                             self.accounts.entry(person2).and_modify(|curr| *curr += amt).or_insert(amt);
+
+                            print!("BALANCES: ");
+                            for (account, balance) in &self.accounts {
+                                print!("{account}: {balance}\t");
+                            }
+                            println!("\n");
                         },
                         None => ()
                     }
@@ -39,20 +50,6 @@ impl Bank {
                 
             }
         }
-    
-        // // it's a deposit
-        // if (transaction_type == 0) {
-        //     if self.accounts.get(&account1) != None {
-        //         match self.accounts.get(&account1) {
-        //             Some(amount) => {
-
-        //             }
-        //             None => {
-
-        //             }
-        //         }
-        //     }
-        // }
     
     
     
