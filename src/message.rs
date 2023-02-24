@@ -1,35 +1,52 @@
 use serde::{Serialize, Deserialize};
 use core::cmp::Ordering;
+use crate::NodeId;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum NetworkMessage {
+pub enum NetworkMessageType {
     PriorityRequest(PriorityRequestType),
     PriorityProposal(PriorityProposalType),
     PriorityMessage(PriorityMessageType)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NetworkMessage {
+    pub sequence_num: usize,
+    pub msg_type: NetworkMessageType,
+    pub forwarded_for: Option<String>
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PriorityRequestType {
-    pub sender: String,
-    pub local_id: usize
+    pub local_id: MessageId,
+    pub message: UserInput
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PriorityProposalType {
-    pub proposer: String,
-    pub local_id: usize,
-    pub priority: usize
+    pub requester_local_id: MessageId,
+    pub priority: MessagePriority
 }
 
-/// TODO: https://doc.rust-lang.org/stable/std/cmp/trait.Ord.html#how-can-i-implement-ord
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PriorityMessageType {
-    pub priority: usize,
-    pub proposer: String,
-    pub message: UserInput
+    pub local_id: MessageId,
+    pub priority: MessagePriority,
 }
 
-impl Ord for PriorityMessageType {
+#[derive(Debug, Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
+pub struct MessageId {
+    pub original_sender: NodeId,
+    pub local_id: usize
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MessagePriority {
+    pub priority: usize,
+    pub proposer: NodeId
+}
+
+impl Ord for MessagePriority {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.priority.cmp(&other.priority) {
             Ordering::Equal => self.proposer.cmp(&other.proposer),
@@ -38,7 +55,7 @@ impl Ord for PriorityMessageType {
     }
 }
 
-impl PartialOrd for PriorityMessageType {
+impl PartialOrd for MessagePriority {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.priority.cmp(&other.priority) {
             Ordering::Equal => Some(self.proposer.cmp(&other.proposer)),
@@ -47,13 +64,13 @@ impl PartialOrd for PriorityMessageType {
     }
 }
 
-impl PartialEq for PriorityMessageType {
+impl PartialEq for MessagePriority {
     fn eq(&self, other: &Self) -> bool {
         self.priority == other.priority && self.proposer == other.proposer
     }
 }
 
-impl Eq for PriorityMessageType {}
+impl Eq for MessagePriority {}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum UserInput {

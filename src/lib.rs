@@ -10,8 +10,10 @@ pub use cli::*;
 
 pub use std::collections::HashMap;
 
-pub type ConnectionList = Vec<String>;
-pub type HostName = String;
-pub type Port = u16;
 
-pub type Config = HashMap<String, (HostName, Port, ConnectionList)>;
+pub type Port = u16;
+pub type HostName = String;
+pub type NodeId = String;
+pub type ConnectionList = Vec<NodeId>;
+
+pub type Config = HashMap<NodeId, (HostName, Port, ConnectionList)>;

@@ -1,4 +1,8 @@
-use super::{MemberStateMessage, MulticastMemberData, MulticastMemberHandle, member::member_loop};
+use super::{
+    MemberStateMessage, MulticastMemberData, MulticastMemberHandle, 
+    types::{MulticastGroup, IncomingChannel},
+    member::member_loop
+};
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
     io::{AsyncWriteExt, AsyncBufReadExt, BufStream},
@@ -6,11 +10,11 @@ use tokio::{
 };
 use tokio_retry::{Retry, strategy::FixedInterval};
 use std::{collections::HashMap, net::SocketAddr};
-use crate::Config;
+use crate::{Config, NodeId};
 
 pub struct ConnectionPool {
-    group: HashMap<String, MulticastMemberHandle>,
-    node_id: String,
+    group: HashMap<NodeId, MulticastMemberHandle>,
+    node_id: NodeId,
     from_clients: UnboundedReceiver<MemberStateMessage>,
     client_snd_handle: UnboundedSender<MemberStateMessage>
 }
@@ -19,7 +23,7 @@ static CONNECTION_RETRY_ATTEMPS: usize = 200;
 static CONNECTION_RETRY_DELAY_MS: u64 = 100;
 
 impl ConnectionPool {
-    pub(super) fn new(node_id: String) -> Self {
+    pub(super) fn new(node_id: NodeId) -> Self {
         let (client_snd_handle, from_clients) = unbounded_channel();
 
         Self {
@@ -30,8 +34,8 @@ impl ConnectionPool {
         }
     }
 
-    pub(super) fn consume(self) -> (HashMap<String, MulticastMemberHandle>, UnboundedReceiver<MemberStateMessage>) {
-        (self.group, self.from_clients)
+    pub(super) fn consume(self) -> (MulticastGroup, IncomingChannel, UnboundedSender<MemberStateMessage>) {
+        (self.group, self.from_clients, self.client_snd_handle)
     }
 
     async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(TcpStream, String)>) {

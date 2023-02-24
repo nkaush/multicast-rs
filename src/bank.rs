@@ -19,7 +19,7 @@ impl Bank {
         (this, snd)
     }
 
-    pub async fn multicast_connection(&mut self) {
+    pub async fn main_loop(&mut self) {
         
         while let Some(sample) = self.rcv.recv().await {
             match sample {
