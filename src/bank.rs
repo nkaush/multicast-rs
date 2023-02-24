@@ -20,43 +20,39 @@ impl Bank {
     }
 
     pub async fn multicast_connection(&mut self) {
-
-        let mut transaction_type = 0;
-        let mut account1:String = String::new();
-        let mut account2:String = String::new();
-        let mut amount:usize = 0;
         
         while let Some(sample) = self.rcv.recv().await {
             match sample {
                 UserInput::Deposit(person, amt) => {
-                    transaction_type = 0;
-                    account1 = person;
-                    amount = amt;
+                    self.accounts.entry(person).and_modify(|curr| *curr += amt).or_insert(amt);
                 }
     
                 UserInput::Transfer(person1, person2, amt) => {
-                    transaction_type = 1;
-                    account1 = person1;
-                    account2 = person2;
-                    amount = amt;
+                    match (self.accounts.get(&person1)) {
+                        Some(balance1) => if balance1 >= &amt { 
+                            self.accounts.entry(person1).and_modify(|curr| *curr -= amt);
+                            self.accounts.entry(person2).and_modify(|curr| *curr += amt).or_insert(amt);
+                        },
+                        None => ()
+                    }
                 }
                 
             }
         }
     
-        // it's a deposit
-        if (transaction_type == 0) {
-            if self.accounts.get(&account1) != None {
-                match self.accounts.get(&account1) {
-                    Some(amount) => {
+        // // it's a deposit
+        // if (transaction_type == 0) {
+        //     if self.accounts.get(&account1) != None {
+        //         match self.accounts.get(&account1) {
+        //             Some(amount) => {
 
-                    }
-                    None => {
+        //             }
+        //             None => {
 
-                    }
-                }
-            }
-        }
+        //             }
+        //         }
+        //     }
+        // }
     
     
     
