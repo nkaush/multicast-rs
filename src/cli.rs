@@ -16,40 +16,26 @@ impl Cli {
 
     pub async fn taking_input(&mut self) {
         let mut stdin = FramedRead::new(tokio::io::stdin(), LinesCodec::new());
-        while let Some(buffer) = stdin.next().await {
-            match buffer {
-                Err(_) => break,
-                Ok(line) => {
-                    let delimited: Vec <_> = line
-                        .trim()
-                        .split_ascii_whitespace()
-                        .collect();
-                    println!("{delimited:?}");
-                    if delimited.len() != 3 && delimited.len() != 5 {
-                        continue;
-                    }
+        while let Some(Ok(line)) = stdin.next().await {
+            let delimited: Vec <_> = line
+                .trim()
+                .split_ascii_whitespace()
+                .filter(|term| term.len() > 0)
+                .collect();
+            println!("{delimited:?}");
 
-                    match delimited[0] {
-                        "DEPOSIT" => match delimited[2].parse() {
-                            Ok(amount) => self.cli_send.send(
-                                UserInput::Deposit(
-                                    delimited[1].into(), 
-                                    amount)
-                                ).unwrap(),
-                            Err(_) => continue
-                        },
-                        "TRANSFER" => match delimited[4].parse() {
-                            Ok(amount) => self.cli_send.send(
-                                UserInput::Transfer(
-                                    delimited[1].into(), 
-                                    delimited[3].into(), 
-                                    amount)
-                                ).unwrap(),
-                            Err(_) => continue
-                        },
-                        _ => ()
+            match delimited[..] {
+                ["DEPOSIT", from, amt] => {
+                    if let Ok(amt) = amt.parse() {
+                        self.cli_send.send(UserInput::Deposit(from.to_string(), amt)).unwrap()
                     }
-                }
+                },
+                ["TRANSFER", from, "->", to, amt] => {
+                    if let Ok(amt) = amt.parse() {
+                        self.cli_send.send(UserInput::Transfer(from.to_string(), to.to_string(), amt)).unwrap();
+                    }
+                },
+                _ => ()
             }
         }
     }
