@@ -98,7 +98,7 @@ impl ConnectionPool {
         loop {
             select! {
                 client = tcp_listener.accept() => match client {
-                    Ok((stream, _addr)) => { // TODO maybe we need to do more here
+                    Ok((stream, _addr)) => {
                         let mut stream = BufStream::new(stream);
                         let mut member_id = String::new();
                         match stream.read_line(&mut member_id).await {
@@ -113,7 +113,7 @@ impl ConnectionPool {
                         continue
                     }
                 },
-                Some((stream, member_id)) = stream_rcv.recv() => { // TODO maybe we need to do more here
+                Some((stream, member_id)) = stream_rcv.recv() => {
                     self.admit_member(stream, member_id);
                     if self.group.len() == config.len() - 1 { break self; }
                 }

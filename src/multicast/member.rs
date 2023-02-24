@@ -3,8 +3,8 @@ use tokio_util::codec::LengthDelimitedCodec;
 use futures::{stream::StreamExt, SinkExt};
 use tokio::{net::TcpStream, select};
 
-pub(super) async fn member_loop(socket: TcpStream, mut member_data: MulticastMemberData) {
-    let (read, write) = socket.into_split();
+pub(super) async fn member_loop(mut socket: TcpStream, mut member_data: MulticastMemberData) {
+    let (read, write) = socket.split();
     let mut write = LengthDelimitedCodec::builder()
         .length_field_type::<u32>()
         .new_write(write);

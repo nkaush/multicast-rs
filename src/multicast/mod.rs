@@ -159,7 +159,7 @@ impl Multicast {
                     MemberStateMessageType::Message(net_msg) => {
                         eprintln!("Got network message from {}: {:?}", msg.member_id, net_msg);
                         match net_msg {
-                            NetworkMessage::PriorityRequest(_) => todo!(),
+                            NetworkMessage::PriorityRequest(m) => println!("{:?}", m),
                             NetworkMessage::PriorityProposal(_) => todo!(),
                             NetworkMessage::PriorityMessage(_) => todo!()
                         }
