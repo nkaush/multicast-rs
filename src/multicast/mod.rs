@@ -1,13 +1,15 @@
 mod connection_pool;
+mod protocol;
 mod reliable;
 mod member;
 mod basic;
 
-use member::{MulticastMemberHandle, MemberStateMessage, MemberStateMessageType};
-use crate::{
-    NetworkMessageType, PriorityProposalType, PriorityRequestType, UserInput, 
-    Config, NodeId, MessagePriority, MessageId, PriorityMessageType
+use protocol::{
+    NetworkMessage, NetworkMessageType, MessageId, MessagePriority, 
+    PriorityMessageType, PriorityRequestType, PriorityProposalType
 };
+use member::{MulticastMemberHandle, MemberStateMessage, MemberStateMessageType};
+use crate::{UserInput, Config, NodeId};
 use connection_pool::ConnectionPool;
 use reliable::ReliableMulticast;
 
@@ -16,8 +18,6 @@ use std::{collections::HashMap, cmp::Reverse};
 use log::{trace, error, log_enabled, Level};
 use priority_queue::PriorityQueue;
 use tokio::select;
-
-
 
 type MulticastGroup = HashMap<String, MulticastMemberHandle>;
 type IncomingChannel = UnboundedReceiver<MemberStateMessage>;
@@ -54,7 +54,7 @@ impl QueuedMessage {
     }
 }
 
-pub struct Multicast {
+pub struct TotalOrderedMulticast {
     node_id: NodeId,
     
     pq: PriorityQueue<MessageId, Reverse<MessagePriority>>,
@@ -63,7 +63,7 @@ pub struct Multicast {
     next_local_id: usize,
     next_priority_proposal: usize,
 
-    /// Stores all of the multicast group member thread handles
+    /// A reliable multicast client that delivers messages from members to this node
     reliable_multicast: ReliableMulticast,
 
     /// Receive handle to take input from the CLI loop
@@ -71,15 +71,12 @@ pub struct Multicast {
 
     /// Send handle to pass messages to the bank logic thread
     to_bank: UnboundedSender<UserInput>,
-
-    // /// Receive handle for client handling threads to send multicast engine any messages
-    // from_clients: UnboundedReceiver<MemberStateMessage>,
     
     /// Hold on to the send handle so we always know we can receive messages
     client_snd_handle: UnboundedSender<MemberStateMessage>,
 }
 
-impl Multicast {
+impl TotalOrderedMulticast {
     pub async fn new(node_id: NodeId, config: &Config, bank_snd: UnboundedSender<UserInput>) -> (Self, UnboundedSender<UserInput>) {
         let (to_multicast, from_cli) = unbounded_channel();
 

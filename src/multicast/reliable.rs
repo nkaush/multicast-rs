@@ -1,10 +1,15 @@
-use super::{member::{MemberStateMessage, MemberStateMessageType}, NetworkMessageType};
-use crate::multicast::{IncomingChannel, MulticastGroup, basic::BasicMulticast};
-use crate::{NetworkMessage, NodeId};
+use super::{
+    IncomingChannel, MulticastGroup, NetworkMessageType, NetworkMessage,
+    MemberStateMessage, MemberStateMessageType, basic::BasicMulticast
+};
 use std::collections::HashMap;
+use crate::NodeId;
 use log::trace;
 
+/// A reliable multicast implementation that guarantees delivery to all 
+/// members of the group if a message is delivered to at least one member.
 pub(super) struct ReliableMulticast {
+    /// The underlying basic multicast protocol
     basic: BasicMulticast,
     prior_seq: HashMap<NodeId, usize>,
     next_seq_num: usize
@@ -52,7 +57,6 @@ impl ReliableMulticast {
     }
 
     pub async fn deliver(&mut self) -> MemberStateMessage {
-        // TODO maybe exclude BOTH forwarded_for AND member_id of sender
         let member_state = self.basic.deliver().await;
         if let MemberStateMessageType::Message(msg) = &member_state.msg {
             if msg.sequence_num.is_none() {
@@ -73,7 +77,7 @@ impl ReliableMulticast {
 
             if let Some(last_seq) = self.prior_seq.get(original_sender) {
                 if last_seq >= &msg_seq_num {
-                    trace!("\treliable got network message from {} ... skipping... last_seq={} and msg.sequence_num={}", member_state.member_id, last_seq, msg_seq_num);
+                    trace!("\treliable got network message from {} ... skipping ... last_seq={} and msg.sequence_num={}", member_state.member_id, last_seq, msg_seq_num);
                     return MemberStateMessage {
                         msg: MemberStateMessageType::DuplicateMessage,
                         member_id: original_sender.to_string()

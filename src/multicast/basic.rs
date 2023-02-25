@@ -1,5 +1,5 @@
-use super::{member::MemberStateMessage, MulticastGroup, IncomingChannel};
-use crate::{NodeId, NetworkMessage};
+use super::{MulticastGroup, IncomingChannel, NetworkMessage, MemberStateMessage};
+use crate::NodeId;
 use log::trace;
 
 pub(super) struct BasicMulticast {

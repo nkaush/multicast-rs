@@ -4,8 +4,9 @@ use tokio::{
 };
 use tokio_util::codec::LengthDelimitedCodec;
 use futures::{stream::StreamExt, SinkExt};
-use crate::{NetworkMessage, NodeId};
+use super::NetworkMessage;
 use log::{trace, error};
+use crate::NodeId;
 
 /// Represents any message types a member handler thread could send the multicast engine
 #[derive(Debug)]
@@ -33,16 +34,12 @@ impl MulticastMemberHandle {
     pub fn pass_message(&self, msg: NetworkMessage) -> Result<(), SendError<NetworkMessage>> {
         self.to_client.send(msg)
     }
-
-    fn abort(&self) {
-        self.handle.abort()
-    }
 }
 
 impl Drop for MulticastMemberHandle {
     fn drop(&mut self) {
         trace!("Aborting client thread for {}", self.member_id);
-        self.abort()
+        self.handle.abort()
     }
 }
 
