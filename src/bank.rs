@@ -20,16 +20,15 @@ impl Bank {
     }
 
     pub async fn main_loop(&mut self) {
-        
         while let Some(sample) = self.rcv.recv().await {
             match sample {
                 UserInput::Deposit(person, amt) => {
                     self.accounts.entry(person).and_modify(|curr| *curr += amt).or_insert(amt); 
-                    print!("BALANCES: ");
+                    print!("BALANCES ");
                     for (account, balance) in &self.accounts {
-                        print!("{account}: {balance}\t");
+                        print!("{account}:{balance} ");
                     }
-                    println!("\n");
+                    println!("");
                 }
     
                 UserInput::Transfer(person1, person2, amt) => {
@@ -38,11 +37,11 @@ impl Bank {
                             self.accounts.entry(person1).and_modify(|curr| *curr -= amt);
                             self.accounts.entry(person2).and_modify(|curr| *curr += amt).or_insert(amt);
 
-                            print!("BALANCES: ");
+                            print!("BALANCES ");
                             for (account, balance) in &self.accounts {
-                                print!("{account}: {balance}\t");
+                                print!("{account}:{balance} ");
                             }
-                            println!("\n");
+                            println!("");
                         },
                         None => ()
                     }
