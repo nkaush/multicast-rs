@@ -1,4 +1,4 @@
-use super::{MemberStateMessage, MulticastGroup, IncomingChannel};
+use super::{member::MemberStateMessage, MulticastGroup, IncomingChannel};
 use crate::{NodeId, NetworkMessage};
 
 pub(super) struct BasicMulticast {
@@ -17,18 +17,21 @@ impl BasicMulticast {
 
     pub fn send_single(&self, msg: NetworkMessage, recipient: &NodeId) {
         if let Some(handle) = self.group.get(recipient) {
+            eprintln!("\tsending message to {}: {:?}\n", handle.member_id, msg);
             handle.pass_message(msg).unwrap();
         }
     }
 
-    pub fn broadcast(&self, msg: NetworkMessage, except: Option<String>) {
+    pub fn broadcast(&self, msg: NetworkMessage, except: Option<Vec<String>>) {
         match except {
             Some(except) => for handle in self.group.values() {
-                if except != handle.member_id {
+                if !except.contains(&handle.member_id) {
+                    eprintln!("\tsending message to {}: {:?}\n", handle.member_id, msg);
                     handle.pass_message(msg.clone()).unwrap();
                 }
             },
             None => for handle in self.group.values() {
+                eprintln!("\tsending message to {}: {:?}\n", handle.member_id, msg);
                 handle.pass_message(msg.clone()).unwrap();
             }
         }

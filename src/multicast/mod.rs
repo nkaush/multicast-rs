@@ -1,87 +1,25 @@
 mod connection_pool;
 mod reliable;
 mod member;
-mod types;
 mod basic;
 
-use types::*;
-
+use member::{MulticastMemberHandle, MemberStateMessage, MemberStateMessageType};
 use crate::{
-    message::{NetworkMessage, NetworkMessageType, PriorityProposalType, PriorityRequestType, UserInput}, 
+    message::{NetworkMessageType, PriorityProposalType, PriorityRequestType, UserInput}, 
     Config, NodeId, MessagePriority, MessageId, PriorityMessageType
 };
-use tokio::{
-    sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel},
-    sync::mpsc::error::SendError, task::JoinHandle, select
-};
 
+use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel};
 use priority_queue::PriorityQueue;
 use reliable::ReliableMulticast;
 use std::collections::HashMap;
 use basic::BasicMulticast;
+use tokio::select;
 
 use connection_pool::ConnectionPool;
 
-/// Represents any message types a member handler thread could send the multicast engine
-#[derive(Debug)]
-enum MemberStateMessageType {
-    Message(NetworkMessage),
-    NetworkError
-}
-
-/// Represents any messages a member handler thread could send the multicast engine.
-#[derive(Debug)]
-struct MemberStateMessage {
-    msg: MemberStateMessageType,
-    member_id: NodeId
-}
-
-/// The handle that the multicast engine has for each member handler thread.
-struct MulticastMemberHandle {
-    member_id: NodeId,
-    to_client: UnboundedSender<NetworkMessage>,
-    handle: JoinHandle<()>
-}
-
-impl MulticastMemberHandle {
-    fn pass_message(&self, msg: NetworkMessage) -> Result<(), SendError<NetworkMessage>> {
-        self.to_client.send(msg)
-    }
-
-    fn abort(&self) {
-        self.handle.abort()
-    }
-}
-
-impl Drop for MulticastMemberHandle {
-    fn drop(&mut self) {
-        eprintln!("Aborting client thread for {}", self.member_id);
-        self.abort()
-    }
-}
-
-struct MulticastMemberData {
-    member_id: NodeId,
-    to_engine: UnboundedSender<MemberStateMessage>,
-    from_engine: UnboundedReceiver<NetworkMessage>
-}
-
-impl MulticastMemberData {
-    pub fn generate_state_msg(&self, msg: MemberStateMessageType) -> MemberStateMessage {
-        MemberStateMessage {
-            msg,
-            member_id: self.member_id.clone()
-        }
-    }
-    
-    fn notify_client_message(&mut self, msg: MemberStateMessageType) -> Result<(), SendError<MemberStateMessage>> {
-        self.to_engine.send(self.generate_state_msg(msg))
-    }
-
-    fn notify_network_error(&mut self) -> Result<(), SendError<MemberStateMessage>> {
-        self.to_engine.send(self.generate_state_msg(MemberStateMessageType::NetworkError))
-    }
-}
+type MulticastGroup = HashMap<String, MulticastMemberHandle>;
+type IncomingChannel = UnboundedReceiver<MemberStateMessage>;
 
 struct QueuedMessage {
     transaction: UserInput,
@@ -217,10 +155,7 @@ impl Multicast {
         );
         
         let rq_type = PriorityRequestType { local_id, message: msg };
-        self.reliable_multicast.broadcast(
-            NetworkMessageType::PriorityRequest(rq_type), 
-            None
-        );
+        self.reliable_multicast.broadcast(NetworkMessageType::PriorityRequest(rq_type));
     }
 
     /// We got a request from another process for priority, so propose a priority.
@@ -256,9 +191,7 @@ impl Multicast {
             NetworkMessageType::PriorityMessage(PriorityMessageType {
                 local_id: message_id,
                 priority: agreed_pri
-            }), 
-            None
-        );
+            }));
     }
 
     pub async fn main_loop(&mut self) { 
@@ -271,9 +204,9 @@ impl Multicast {
                         break
                     }
                 },
-                Some(msg) = self.reliable_multicast.deliver() => match msg.msg {
+                msg = self.reliable_multicast.deliver() => match msg.msg {
                     MemberStateMessageType::Message(net_msg) => {
-                        eprintln!("Got network message from {}: {:?}", msg.member_id, net_msg);
+                        eprintln!("DELIVERED network message from {}: {:?}", msg.member_id, net_msg);
                         match net_msg.msg_type {
                             NetworkMessageType::PriorityRequest(request) => self.propose_priority(request),
                             NetworkMessageType::PriorityProposal(m) => {
@@ -305,7 +238,8 @@ impl Multicast {
                         // remove the client from the group if it encounters a network error
                         // TODO: do we need to notify other clients that this client has died?
                         self.reliable_multicast.remove_member(&msg.member_id);
-                    }
+                    },
+                    MemberStateMessageType::DuplicateMessage => ()
                 }
             }
         }

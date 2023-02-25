@@ -1,7 +1,6 @@
 use super::{
-    MemberStateMessage, MulticastMemberData, MulticastMemberHandle, 
-    types::{MulticastGroup, IncomingChannel},
-    member::member_loop
+    member::{member_loop, MemberStateMessage, MulticastMemberData, MulticastMemberHandle},
+    MulticastGroup, IncomingChannel
 };
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},

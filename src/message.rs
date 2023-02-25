@@ -11,7 +11,9 @@ pub enum NetworkMessageType {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NetworkMessage {
-    pub sequence_num: usize,
+    /// If `sequence_num` is some, then this message must be reliably delivered.
+    /// Otherwise, this message is a one-off and may be dropped.
+    pub sequence_num: Option<usize>,
     pub msg_type: NetworkMessageType,
     pub forwarded_for: Option<String>
 }

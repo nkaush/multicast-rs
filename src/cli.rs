@@ -22,7 +22,6 @@ impl Cli {
                 .split_ascii_whitespace()
                 .filter(|term| term.len() > 0)
                 .collect();
-            println!("{delimited:?}");
 
             match delimited[..] {
                 ["DEPOSIT", from, amt] => {
