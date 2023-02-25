@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
+use crate::{UserInput, NodeId};
 use core::cmp::Ordering;
-use crate::NodeId;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum NetworkMessageType {
@@ -15,7 +15,7 @@ pub struct NetworkMessage {
     /// Otherwise, this message is a one-off and may be dropped.
     pub sequence_num: Option<usize>,
     pub msg_type: NetworkMessageType,
-    pub forwarded_for: Option<String>
+    pub forwarded_for: Option<NodeId>
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -73,9 +73,3 @@ impl PartialEq for MessagePriority {
 }
 
 impl Eq for MessagePriority {}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum UserInput {
-    Deposit(String, usize),
-    Transfer(String, String, usize)
-}

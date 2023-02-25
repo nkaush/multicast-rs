@@ -1,7 +1,7 @@
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio::sync::mpsc::{UnboundedSender};
 use futures::stream::StreamExt;
-use crate::message::UserInput;
+use crate::UserInput;
 
 pub struct Cli {
     cli_send: UnboundedSender<UserInput>

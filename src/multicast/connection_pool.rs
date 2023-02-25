@@ -10,6 +10,7 @@ use tokio::{
 use tokio_retry::{Retry, strategy::FixedInterval};
 use std::{collections::HashMap, net::SocketAddr};
 use crate::{Config, NodeId};
+use log::{trace, error};
 
 pub struct ConnectionPool {
     group: HashMap<NodeId, MulticastMemberHandle>,
@@ -39,14 +40,14 @@ impl ConnectionPool {
 
     async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(TcpStream, String)>) {
         let server_addr = format!("{host}:{port}");
-        eprintln!("Connecting to {} at {}...", node_id, server_addr);
+        trace!("Connecting to {} at {}...", node_id, server_addr);
 
         let retry_strategy = FixedInterval::from_millis(CONNECTION_RETRY_DELAY_MS)
             .take(CONNECTION_RETRY_ATTEMPS);
 
         match Retry::spawn(retry_strategy, || TcpStream::connect(&server_addr)).await {
             Ok(mut stream) => {
-                eprintln!("Connected to {} at {}", node_id, server_addr);
+                trace!("Connected to {} at {}", node_id, server_addr);
 
                 stream.write_all(format!("{}\n", this_node).as_bytes()).await.unwrap();
                 stream.flush().await.unwrap();
@@ -54,7 +55,7 @@ impl ConnectionPool {
                 stream_snd.send((stream, node_id)).unwrap();
             },
             Err(e) => {
-                eprintln!("Failed to connect to {}: {:?}", server_addr, e);
+                error!("Failed to connect to {}: {:?}", server_addr, e);
                 std::process::exit(1);
             }
         }
@@ -83,7 +84,7 @@ impl ConnectionPool {
         let tcp_listener = match TcpListener::bind(bind_addr).await {
             Ok(l) => l,
             Err(e) => {
-                eprintln!("Failed to bind to {}: {:?}", bind_addr, e);
+                error!("Failed to bind to {}: {:?}", bind_addr, e);
                 std::process::exit(1);
             }
         };
@@ -112,7 +113,7 @@ impl ConnectionPool {
                         if self.group.len() == config.len() - 1 { break self; }
                     },
                     Err(e) => {
-                        eprintln!("Could not accept client: {:?}", e);
+                        error!("Could not accept client: {:?}", e);
                         continue
                     }
                 },
