@@ -133,10 +133,16 @@ impl Multicast {
         }
     }
 
+    fn print_pq(&self) {
+        for (id, pri) in self.pq.clone().into_sorted_iter() {
+            eprint!("({} - {} - pri={} by={}) ", id.original_sender, id.local_id, pri.0.proposer, pri.0.proposer);
+        }
+        eprintln!("\n");
+    }
+
     fn try_empty_pq(&mut self) {
-        
         while let Some((id, _)) = self.pq.peek() {
-            eprintln!("{:?}\n", self.pq.clone().into_sorted_vec());
+            self.print_pq();
             let qm = self.queued_messages.get(id).unwrap();
             if qm.is_deliverable() {
                 let qm = self.queued_messages.remove(id).unwrap();
@@ -146,7 +152,7 @@ impl Multicast {
                 break;
             }
         }
-        eprintln!("{:?}\n", self.pq.clone().into_sorted_vec());
+        self.print_pq();
     }
 
     /// We got some input from the CLI, now we want to request a priority for it.
