@@ -5,6 +5,7 @@ use tokio::{
 use tokio_util::codec::LengthDelimitedCodec;
 use futures::{stream::StreamExt, SinkExt};
 use crate::{NetworkMessage, NodeId};
+use log::{trace, error};
 
 /// Represents any message types a member handler thread could send the multicast engine
 #[derive(Debug)]
@@ -40,7 +41,7 @@ impl MulticastMemberHandle {
 
 impl Drop for MulticastMemberHandle {
     fn drop(&mut self) {
-        eprintln!("Aborting client thread for {}", self.member_id);
+        trace!("Aborting client thread for {}", self.member_id);
         self.abort()
     }
 }
@@ -86,7 +87,7 @@ pub(super) async fn member_loop(socket: TcpStream, mut member_data: MulticastMem
                     let msg = match bincode::deserialize(&bytes) {
                         Ok(m) => MemberStateMessageType::Message(m),
                         Err(e) => {
-                            eprintln!("deserialize error on client handler {}: {:?}", member_data.member_id, e);
+                            error!("deserialize error on client handler {}: {:?}", member_data.member_id, e);
                             continue
                         }
                     };

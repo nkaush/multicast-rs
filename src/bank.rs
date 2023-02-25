@@ -1,6 +1,7 @@
 use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel};
-use crate::message::UserInput;
 use std::collections::BTreeMap;
+use crate::message::UserInput;
+use log::trace;
 
 pub struct Bank {
     // add variables
@@ -23,7 +24,7 @@ impl Bank {
         while let Some(sample) = self.rcv.recv().await {
             match sample {
                 UserInput::Deposit(person, amt) => {
-                    eprintln!("[BANK] DEPOSIT {} {}", person, amt);
+                    trace!("[BANK] DEPOSIT {} {}", person, amt);
                     self.accounts.entry(person).and_modify(|curr| *curr += amt).or_insert(amt); 
                     print!("BALANCES ");
                     for (account, balance) in &self.accounts {

@@ -1,5 +1,6 @@
 use super::{member::MemberStateMessage, MulticastGroup, IncomingChannel};
 use crate::{NodeId, NetworkMessage};
+use log::trace;
 
 pub(super) struct BasicMulticast {
     group: MulticastGroup,
@@ -17,7 +18,7 @@ impl BasicMulticast {
 
     pub fn send_single(&self, msg: NetworkMessage, recipient: &NodeId) {
         if let Some(handle) = self.group.get(recipient) {
-            eprintln!("\tsending message to {}: {:?}\n", handle.member_id, msg);
+            trace!("\tsending message to {}: {:?}\n", handle.member_id, msg);
             handle.pass_message(msg).unwrap();
         }
     }
@@ -26,12 +27,12 @@ impl BasicMulticast {
         match except {
             Some(except) => for handle in self.group.values() {
                 if !except.contains(&handle.member_id) {
-                    eprintln!("\tsending message to {}: {:?}\n", handle.member_id, msg);
+                    trace!("\tsending message to {}: {:?}\n", handle.member_id, msg);
                     handle.pass_message(msg.clone()).unwrap();
                 }
             },
             None => for handle in self.group.values() {
-                eprintln!("\tsending message to {}: {:?}\n", handle.member_id, msg);
+                trace!("\tsending message to {}: {:?}\n", handle.member_id, msg);
                 handle.pass_message(msg.clone()).unwrap();
             }
         }

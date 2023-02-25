@@ -1,7 +1,8 @@
 use super::{member::{MemberStateMessage, MemberStateMessageType}, NetworkMessageType};
-use crate::multicast::basic::BasicMulticast;
+use crate::multicast::{IncomingChannel, MulticastGroup, basic::BasicMulticast};
 use crate::{NetworkMessage, NodeId};
 use std::collections::HashMap;
+use log::trace;
 
 pub(super) struct ReliableMulticast {
     basic: BasicMulticast,
@@ -10,9 +11,9 @@ pub(super) struct ReliableMulticast {
 }
 
 impl ReliableMulticast {
-    pub fn new(basic: BasicMulticast) -> Self {
+    pub fn new(group: MulticastGroup, from_members: IncomingChannel) -> Self {
         Self { 
-            basic,
+            basic: BasicMulticast::new(group, from_members),
             prior_seq: HashMap::new(),
             next_seq_num: 0
         }
@@ -54,8 +55,8 @@ impl ReliableMulticast {
         // TODO maybe exclude BOTH forwarded_for AND member_id of sender
         let member_state = self.basic.deliver().await;
         if let MemberStateMessageType::Message(msg) = &member_state.msg {
-            eprint!("\treliable got network message from {} ... ", member_state.member_id);
             if msg.sequence_num.is_none() {
+                trace!("\treliable got network message from {} ... one off message", member_state.member_id);
                 return member_state;
             }
 
@@ -72,7 +73,7 @@ impl ReliableMulticast {
 
             if let Some(last_seq) = self.prior_seq.get(original_sender) {
                 if last_seq >= &msg_seq_num {
-                    eprintln!("skipping... last_seq={} and msg.sequence_num={}", last_seq, msg_seq_num);
+                    trace!("\treliable got network message from {} ... skipping... last_seq={} and msg.sequence_num={}", member_state.member_id, last_seq, msg_seq_num);
                     return MemberStateMessage {
                         msg: MemberStateMessageType::DuplicateMessage,
                         member_id: original_sender.to_string()
@@ -80,7 +81,7 @@ impl ReliableMulticast {
                 }
             }
 
-            eprintln!("got {:?}\n", msg);
+            trace!("\treliable got network message from {} ... got {:?}\n", member_state.member_id, msg);
 
             self.prior_seq.insert(original_sender.into(), msg_seq_num);
             let msg = NetworkMessage {
