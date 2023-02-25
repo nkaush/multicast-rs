@@ -2,7 +2,7 @@ use std::io::{BufReader, BufRead};
 use tokio::{select, signal};
 use std::fs::File;
 
-use mp1_node::{Bank, Cli, Config, Multicast};
+use mp1_node::{Bank, Cli, Config, TotalOrderedMulticast};
 
 fn parse_config(path: &str) -> Result<Config, String> {
     let mut config = Config::new();
@@ -71,7 +71,7 @@ async fn main() {
     let node_id = args[1].clone();
 
     let (mut bank, bank_snd) = Bank::new();
-    let (mut multicast, multicast_snd) = Multicast::new(node_id, &config, bank_snd).await;
+    let (mut multicast, multicast_snd) = TotalOrderedMulticast::new(node_id, &config, bank_snd).await;
     let mut cli = Cli::new(multicast_snd);
 
     select! {

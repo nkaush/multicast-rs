@@ -1,23 +1,23 @@
 mod connection_pool;
+mod protocol;
 mod reliable;
 mod member;
 mod basic;
 
-use member::{MulticastMemberHandle, MemberStateMessage, MemberStateMessageType};
-use crate::{
-    message::{NetworkMessageType, PriorityProposalType, PriorityRequestType, UserInput}, 
-    Config, NodeId, MessagePriority, MessageId, PriorityMessageType
+use protocol::{
+    NetworkMessage, NetworkMessageType, MessageId, MessagePriority, 
+    PriorityMessageType, PriorityRequestType, PriorityProposalType
 };
+use member::{MulticastMemberHandle, MemberStateMessage, MemberStateMessageType};
+use crate::{UserInput, Config, NodeId};
+use connection_pool::ConnectionPool;
+use reliable::ReliableMulticast;
 
 use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel};
+use std::{collections::HashMap, cmp::Reverse};
+use log::{trace, error, log_enabled, Level};
 use priority_queue::PriorityQueue;
-use reliable::ReliableMulticast;
-use std::collections::HashMap;
-use basic::BasicMulticast;
-use std::cmp::Reverse;
 use tokio::select;
-
-use connection_pool::ConnectionPool;
 
 type MulticastGroup = HashMap<String, MulticastMemberHandle>;
 type IncomingChannel = UnboundedReceiver<MemberStateMessage>;
@@ -54,7 +54,7 @@ impl QueuedMessage {
     }
 }
 
-pub struct Multicast {
+pub struct TotalOrderedMulticast {
     node_id: NodeId,
     
     pq: PriorityQueue<MessageId, Reverse<MessagePriority>>,
@@ -63,7 +63,7 @@ pub struct Multicast {
     next_local_id: usize,
     next_priority_proposal: usize,
 
-    /// Stores all of the multicast group member thread handles
+    /// A reliable multicast client that delivers messages from members to this node
     reliable_multicast: ReliableMulticast,
 
     /// Receive handle to take input from the CLI loop
@@ -71,15 +71,12 @@ pub struct Multicast {
 
     /// Send handle to pass messages to the bank logic thread
     to_bank: UnboundedSender<UserInput>,
-
-    // /// Receive handle for client handling threads to send multicast engine any messages
-    // from_clients: UnboundedReceiver<MemberStateMessage>,
     
     /// Hold on to the send handle so we always know we can receive messages
     client_snd_handle: UnboundedSender<MemberStateMessage>,
 }
 
-impl Multicast {
+impl TotalOrderedMulticast {
     pub async fn new(node_id: NodeId, config: &Config, bank_snd: UnboundedSender<UserInput>) -> (Self, UnboundedSender<UserInput>) {
         let (to_multicast, from_cli) = unbounded_channel();
 
@@ -87,15 +84,12 @@ impl Multicast {
             .connect(config)
             .await
             .consume();
-        eprintln!("done connecting!");
-
-        let basic = BasicMulticast::new(group, from_clients);
-        let reliable_multicast = ReliableMulticast::new(basic);
+        trace!("finished connecting to group!");
 
         let this = Self {
             node_id,
             from_cli,
-            reliable_multicast,
+            reliable_multicast: ReliableMulticast::new(group, from_clients),
             pq: PriorityQueue::new(),
             next_local_id: 0,
             next_priority_proposal: 0,
@@ -134,15 +128,17 @@ impl Multicast {
     }
 
     fn print_pq(&self) {
+        let mut pq_str = String::new();
         for (id, pri) in self.pq.clone().into_sorted_iter() {
-            eprint!("({} - {} - pri={} by={}) ", id.original_sender, id.local_id, pri.0.priority, pri.0.proposer);
+            pq_str += format!("({} - {} - pri={} by={}) ", id.original_sender, id.local_id, pri.0.priority, pri.0.proposer).as_str();
         }
-        eprintln!("\n");
+        trace!("{}", pq_str);
     }
 
     fn try_empty_pq(&mut self) {
         while let Some((id, _)) = self.pq.peek() {
-            self.print_pq();
+            if log_enabled!(Level::Trace) { self.print_pq(); }
+
             let qm = self.queued_messages.get(id).unwrap();
             if qm.is_deliverable() {
                 let qm = self.queued_messages.remove(id).unwrap();
@@ -152,7 +148,7 @@ impl Multicast {
                 break;
             }
         }
-        self.print_pq();
+        if log_enabled!(Level::Trace) { self.print_pq(); }
     }
 
     /// We got some input from the CLI, now we want to request a priority for it.
@@ -212,19 +208,22 @@ impl Multicast {
                 input = self.from_cli.recv() => match input {
                     Some(msg) => self.request_priority(msg),
                     None => {
-                        println!("from_cli channel closed");
+                        error!("from_cli channel closed");
                         break
                     }
                 },
                 msg = self.reliable_multicast.deliver() => match msg.msg {
                     MemberStateMessageType::Message(net_msg) => {
-                        eprintln!("DELIVERED network message from {}: {:?}", msg.member_id, net_msg);
+                        trace!("DELIVERED network message from {}: {:?}", msg.member_id, net_msg);
                         match net_msg.msg_type {
                             NetworkMessageType::PriorityRequest(request) => self.propose_priority(request),
                             NetworkMessageType::PriorityProposal(m) => {
                                 let mid = m.requester_local_id;
                                 let qm = self.queued_messages.get_mut(&mid).unwrap();
-                                self.pq.push_increase(mid.clone(), Reverse(m.priority));
+
+                                // We are reversing the priority, so push decrease will be inverted 
+                                // and push if the new inner priority is greater than the old priority
+                                self.pq.push_decrease(mid.clone(), Reverse(m.priority));
                                 qm.increment_vote_count();
 
                                 if qm.get_vote_count() >= self.reliable_multicast.size() {
@@ -239,7 +238,7 @@ impl Multicast {
                                 self.sync_next_priority(&m.priority);
 
                                 let qm = self.queued_messages.get_mut(&mid).unwrap();
-                                self.pq.push_increase(mid, Reverse(m.priority));
+                                self.pq.push_decrease(mid, Reverse(m.priority));
                                 
                                 qm.mark_deliverable();
                                 self.try_empty_pq();
@@ -248,7 +247,6 @@ impl Multicast {
                     },
                     MemberStateMessageType::NetworkError => {
                         // remove the client from the group if it encounters a network error
-                        // TODO: do we need to notify other clients that this client has died?
                         self.reliable_multicast.remove_member(&msg.member_id);
                     },
                     MemberStateMessageType::DuplicateMessage => ()
