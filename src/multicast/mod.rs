@@ -224,7 +224,10 @@ impl Multicast {
                             NetworkMessageType::PriorityProposal(m) => {
                                 let mid = m.requester_local_id;
                                 let qm = self.queued_messages.get_mut(&mid).unwrap();
-                                self.pq.push_increase(mid.clone(), Reverse(m.priority));
+
+                                // We are reversing the priority, so push decrease will be inverted 
+                                // and push if the new inner priority is greater than the old priority
+                                self.pq.push_decrease(mid.clone(), Reverse(m.priority));
                                 qm.increment_vote_count();
 
                                 if qm.get_vote_count() >= self.reliable_multicast.size() {
@@ -239,7 +242,7 @@ impl Multicast {
                                 self.sync_next_priority(&m.priority);
 
                                 let qm = self.queued_messages.get_mut(&mid).unwrap();
-                                self.pq.push_increase(mid, Reverse(m.priority));
+                                self.pq.push_decrease(mid, Reverse(m.priority));
                                 
                                 qm.mark_deliverable();
                                 self.try_empty_pq();
