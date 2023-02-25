@@ -135,7 +135,7 @@ impl Multicast {
 
     fn print_pq(&self) {
         for (id, pri) in self.pq.clone().into_sorted_iter() {
-            eprint!("({} - {} - pri={} by={}) ", id.original_sender, id.local_id, pri.0.proposer, pri.0.proposer);
+            eprint!("({} - {} - pri={} by={}) ", id.original_sender, id.local_id, pri.0.priority, pri.0.proposer);
         }
         eprintln!("\n");
     }
