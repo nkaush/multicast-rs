@@ -14,6 +14,7 @@ use priority_queue::PriorityQueue;
 use reliable::ReliableMulticast;
 use std::collections::HashMap;
 use basic::BasicMulticast;
+use std::cmp::Reverse;
 use tokio::select;
 
 use connection_pool::ConnectionPool;
@@ -56,7 +57,7 @@ impl QueuedMessage {
 pub struct Multicast {
     node_id: NodeId,
     
-    pq: PriorityQueue<MessageId, MessagePriority>,
+    pq: PriorityQueue<MessageId, Reverse<MessagePriority>>,
     queued_messages: HashMap<MessageId, QueuedMessage>,
     
     next_local_id: usize,
@@ -133,14 +134,19 @@ impl Multicast {
     }
 
     fn try_empty_pq(&mut self) {
+        
         while let Some((id, _)) = self.pq.peek() {
+            eprintln!("{:?}\n", self.pq.clone().into_sorted_vec());
             let qm = self.queued_messages.get(id).unwrap();
             if qm.is_deliverable() {
                 let qm = self.queued_messages.remove(id).unwrap();
                 self.pq.pop();
                 self.to_bank.send(qm.transaction).unwrap();
+            } else {
+                break;
             }
         }
+        eprintln!("{:?}\n", self.pq.clone().into_sorted_vec());
     }
 
     /// We got some input from the CLI, now we want to request a priority for it.
@@ -148,7 +154,7 @@ impl Multicast {
         let local_id = self.get_local_id();
         let my_pri = self.get_next_priority();
 
-        self.pq.push(local_id.clone(), my_pri);
+        self.pq.push(local_id.clone(), Reverse(my_pri.clone()));
         self.queued_messages.insert(
             local_id.clone(), 
             QueuedMessage::new(msg.clone())
@@ -164,7 +170,7 @@ impl Multicast {
         let priority = self.get_next_priority();
         let recipient = requester_local_id.original_sender.clone();
 
-        self.pq.push(requester_local_id.clone(), priority.clone());
+        self.pq.push(requester_local_id.clone(), Reverse(priority.clone()));
         self.queued_messages.insert(
             requester_local_id.clone(),
             QueuedMessage::new(request.message)
@@ -190,7 +196,7 @@ impl Multicast {
         self.reliable_multicast.broadcast(
             NetworkMessageType::PriorityMessage(PriorityMessageType {
                 local_id: message_id,
-                priority: agreed_pri
+                priority: agreed_pri.0
             }));
     }
 
@@ -212,7 +218,7 @@ impl Multicast {
                             NetworkMessageType::PriorityProposal(m) => {
                                 let mid = m.requester_local_id;
                                 let qm = self.queued_messages.get_mut(&mid).unwrap();
-                                self.pq.push_increase(mid.clone(), m.priority);
+                                self.pq.push_increase(mid.clone(), Reverse(m.priority));
                                 qm.increment_vote_count();
 
                                 if qm.get_vote_count() >= self.reliable_multicast.size() {
@@ -227,7 +233,7 @@ impl Multicast {
                                 self.sync_next_priority(&m.priority);
 
                                 let qm = self.queued_messages.get_mut(&mid).unwrap();
-                                self.pq.push_increase(mid, m.priority);
+                                self.pq.push_increase(mid, Reverse(m.priority));
                                 
                                 qm.mark_deliverable();
                                 self.try_empty_pq();
