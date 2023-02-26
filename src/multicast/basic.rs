@@ -1,13 +1,14 @@
 use super::{MulticastGroup, IncomingChannel, NetworkMessage, MemberStateMessage, NodeId};
 use log::trace;
+use std::fmt;
 
-pub(super) struct BasicMulticast {
-    group: MulticastGroup,
-    from_members: IncomingChannel
+pub(super) struct BasicMulticast<M> {
+    group: MulticastGroup<M>,
+    from_members: IncomingChannel<M>
 }
 
-impl BasicMulticast {
-    pub fn new(group: MulticastGroup, from_members: IncomingChannel) -> Self {
+impl<M> BasicMulticast<M> {
+    pub fn new(group: MulticastGroup<M>, from_members: IncomingChannel<M>) -> Self {
         Self { group, from_members }
     }
 
@@ -15,14 +16,14 @@ impl BasicMulticast {
         self.group.len()
     }
 
-    pub fn send_single(&self, msg: NetworkMessage, recipient: &NodeId) {
+    pub fn send_single(&self, msg: NetworkMessage<M>, recipient: &NodeId) where M: fmt::Debug {
         if let Some(handle) = self.group.get(recipient) {
             trace!("\tsending message to {}: {:?}\n", handle.member_id, msg);
             handle.pass_message(msg).unwrap();
         }
     }
 
-    pub fn broadcast(&self, msg: NetworkMessage, except: Option<Vec<NodeId>>) {
+    pub fn broadcast(&self, msg: NetworkMessage<M>, except: Option<Vec<NodeId>>) where M: fmt::Debug + Clone {
         match except {
             Some(except) => for handle in self.group.values() {
                 if !except.contains(&handle.member_id) {
@@ -41,7 +42,7 @@ impl BasicMulticast {
         self.group.remove(member_id);
     }
 
-    pub async fn deliver(&mut self) -> MemberStateMessage {
+    pub async fn deliver(&mut self) -> MemberStateMessage<M> {
         self.from_members.recv().await.unwrap()
     }
 }

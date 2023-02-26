@@ -1,28 +1,27 @@
 use serde::{Serialize, Deserialize};
 use core::cmp::Ordering;
-use crate::UserInput;
 use super::NodeId;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum NetworkMessageType {
-    PriorityRequest(PriorityRequestType),
+pub enum NetworkMessageType<M> {
+    PriorityRequest(PriorityRequestType<M>),
     PriorityProposal(PriorityProposalType),
     PriorityMessage(PriorityMessageType)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct NetworkMessage {
+pub struct NetworkMessage<M> {
     /// If `sequence_num` is some, then this message must be reliably delivered.
     /// Otherwise, this message is a one-off and may be dropped.
     pub sequence_num: Option<usize>,
-    pub msg_type: NetworkMessageType,
+    pub msg_type: NetworkMessageType<M>,
     pub forwarded_for: Option<NodeId>
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PriorityRequestType {
+pub struct PriorityRequestType<M> {
     pub local_id: MessageId,
-    pub message: UserInput
+    pub message: M
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

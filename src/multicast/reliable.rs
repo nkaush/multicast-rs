@@ -2,20 +2,20 @@ use super::{
     IncomingChannel, MulticastGroup, NetworkMessageType, NetworkMessage,
     MemberStateMessage, MemberStateMessageType, basic::BasicMulticast, NodeId
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 use log::trace;
 
 /// A reliable multicast implementation that guarantees delivery to all 
 /// members of the group if a message is delivered to at least one member.
-pub(super) struct ReliableMulticast {
+pub(super) struct ReliableMulticast<M> {
     /// The underlying basic multicast protocol
-    basic: BasicMulticast,
+    basic: BasicMulticast<M>,
     prior_seq: HashMap<NodeId, usize>,
     next_seq_num: usize
 }
 
-impl ReliableMulticast {
-    pub fn new(group: MulticastGroup, from_members: IncomingChannel) -> Self {
+impl<M> ReliableMulticast<M> {
+    pub fn new(group: MulticastGroup<M>, from_members: IncomingChannel<M>) -> Self {
         Self { 
             basic: BasicMulticast::new(group, from_members),
             prior_seq: HashMap::new(),
@@ -33,7 +33,7 @@ impl ReliableMulticast {
         Some(id)
     }
 
-    pub fn broadcast(&mut self, msg_type: NetworkMessageType) {
+    pub fn broadcast(&mut self, msg_type: NetworkMessageType<M>) where M: fmt::Debug + Clone {
         let net_msg = NetworkMessage {
             msg_type,
             forwarded_for: None,
@@ -42,7 +42,7 @@ impl ReliableMulticast {
         self.basic.broadcast(net_msg, None);
     }
 
-    pub fn send_single(&mut self, msg_type: NetworkMessageType, recipient: &NodeId) {
+    pub fn send_single(&mut self, msg_type: NetworkMessageType<M>, recipient: &NodeId) where M: fmt::Debug + Clone {
         let net_msg = NetworkMessage {
             msg_type,
             forwarded_for: None,
@@ -55,7 +55,7 @@ impl ReliableMulticast {
         self.basic.remove_member(member_id);
     }
 
-    pub async fn deliver(&mut self) -> MemberStateMessage {
+    pub async fn deliver(&mut self) -> MemberStateMessage<M> where M: Clone + fmt::Debug {
         let member_state = self.basic.deliver().await;
         if let MemberStateMessageType::Message(msg) = &member_state.msg {
             if msg.sequence_num.is_none() {

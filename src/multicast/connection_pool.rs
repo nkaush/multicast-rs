@@ -1,41 +1,37 @@
 use super::{
-    member::{member_loop, MemberStateMessage, MulticastMemberData},
-    MulticastGroup, IncomingChannel, MulticastMemberHandle
+    member::{member_loop, MulticastMemberData}, Config, NodeId,
+    MulticastMemberHandle, MemberStateMessage
 };
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
     io::{AsyncWriteExt, AsyncBufReadExt, BufStream},
     net::{TcpStream, TcpListener}, select
 };
+use std::{collections::HashMap, net::SocketAddr, fmt};
 use tokio_retry::{Retry, strategy::FixedInterval};
-use std::{collections::HashMap, net::SocketAddr};
-use super::{Config, NodeId};
+use serde::{Serialize, de::DeserializeOwned};
 use log::{trace, error};
 
-pub struct ConnectionPool {
-    group: HashMap<NodeId, MulticastMemberHandle>,
-    node_id: NodeId,
-    from_clients: UnboundedReceiver<MemberStateMessage>,
-    client_snd_handle: UnboundedSender<MemberStateMessage>
+pub(super) struct ConnectionPool<M> {
+    pub group: HashMap<NodeId, MulticastMemberHandle<M>>,
+    pub node_id: NodeId,
+    pub from_members: UnboundedReceiver<MemberStateMessage<M>>,
+    pub client_snd_handle: UnboundedSender<MemberStateMessage<M>>
 }
 
 static CONNECTION_RETRY_ATTEMPS: usize = 200;
 static CONNECTION_RETRY_DELAY_MS: u64 = 100;
 
-impl ConnectionPool {
+impl<M> ConnectionPool<M> {
     pub(super) fn new(node_id: NodeId) -> Self {
         let (client_snd_handle, from_clients) = unbounded_channel();
 
         Self {
             group: Default::default(),
             node_id,
-            from_clients,
+            from_members: from_clients,
             client_snd_handle
         }
-    }
-
-    pub(super) fn consume(self) -> (MulticastGroup, IncomingChannel, UnboundedSender<MemberStateMessage>) {
-        (self.group, self.from_clients, self.client_snd_handle)
     }
 
     async fn connect_to_node(this_node: NodeId, node_id: NodeId, host: String, port: u16, stream_snd: UnboundedSender<(TcpStream, NodeId)>) {
@@ -61,7 +57,7 @@ impl ConnectionPool {
         }
     }
 
-    fn admit_member(&mut self, socket: TcpStream, member_id: NodeId) {
+    fn admit_member(&mut self, socket: TcpStream, member_id: NodeId) where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
         let (to_client, from_engine) = unbounded_channel();
         let member_data = MulticastMemberData {
             member_id: member_id,
@@ -77,7 +73,7 @@ impl ConnectionPool {
         });
     }
 
-    pub(super) async fn connect(mut self, config: &Config) -> Self {
+    pub(super) async fn connect(mut self, config: &Config) -> Self where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
         let node_config = config.get(&self.node_id).unwrap();
 
         let bind_addr: SocketAddr = ([0, 0, 0, 0], node_config.port).into();

@@ -1,6 +1,6 @@
 use mp1_node::{Bank, Cli, TotalOrderedMulticast, parse_config};
 use mp1_node::multicast::{Config, NodeId};
-use tokio::{select, signal};
+use tokio::{select, /* signal*/ };
 
 #[tokio::main]
 async fn main() {
