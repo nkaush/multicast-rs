@@ -41,7 +41,7 @@ impl Bank {
 
     async fn log_latency(&mut self, tx: &Transaction) {
         let latency = crate::get_timestamp() - tx.timestamp;
-        let log_line = format!("n{}-t{},{}", tx.node_id, tx.id, latency);
+        let log_line = format!("n{}-t{},{}\n", tx.node_id, tx.id, latency);
 
         let mut cursor = Cursor::new(log_line);
         self.latency_log.write_all_buf(&mut cursor).await.unwrap();
