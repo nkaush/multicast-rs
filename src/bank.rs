@@ -1,6 +1,6 @@
 use tokio::{
     sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel},
-    io::{BufWriter, AsyncWriteExt}, fs::File
+    io::AsyncWriteExt, fs::File
 };
 use serde::{Serialize, Deserialize};
 use std::collections::BTreeMap;
@@ -25,7 +25,7 @@ pub struct Transaction {
 pub struct Bank {
     rcv: UnboundedReceiver<Transaction>,
     accounts: BTreeMap<String, usize>,
-    latency_log: BufWriter<File>
+    latency_log: File
 }
 
 impl Bank {
@@ -34,7 +34,7 @@ impl Bank {
         let this = Self {
             rcv,
             accounts: BTreeMap::new(),
-            latency_log: BufWriter::new(File::create("latencies.log").await.unwrap())
+            latency_log: File::create("latencies.log").await.unwrap()
         };
         (this, snd)
     }
@@ -68,7 +68,7 @@ impl Bank {
                 TransactionType::Transfer(person1, person2, amt) => {
                     match self.accounts.get(&person1) {
                         Some(balance1) => if balance1 >= &amt { 
-                            eprintln!("[BANK] TRANSFER {} -> {} {}", person1, person2, amt);
+                            trace!("[BANK] TRANSFER {} -> {} {}", person1, person2, amt);
                             self.accounts.entry(person1).and_modify(|curr| *curr -= amt);
                             self.accounts.entry(person2).and_modify(|curr| *curr += amt).or_insert(amt);
                             

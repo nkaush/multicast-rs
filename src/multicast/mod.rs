@@ -75,8 +75,8 @@ pub struct TotalOrderedMulticast<M> {
     /// Send handle to pass messages to the bank logic thread
     to_bank: UnboundedSender<M>,
     
-    // /// Hold on to the send handle so we always know we can receive messages
-    // client_snd_handle: UnboundedSender<MemberStateMessage>,
+    /// Hold on to the send handle so we always know we can receive messages
+    client_snd_handle: UnboundedSender<MemberStateMessage<M>>,
 }
 
 impl<M> TotalOrderedMulticast<M> {
@@ -97,7 +97,7 @@ impl<M> TotalOrderedMulticast<M> {
             next_priority_proposal: 0,
             queued_messages: HashMap::new(),
             to_bank: bank_snd,
-            // pool.client_snd_handle
+            client_snd_handle: pool.client_snd_handle
         };
 
         (this, to_multicast)
