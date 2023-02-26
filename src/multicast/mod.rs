@@ -1,17 +1,20 @@
 mod connection_pool;
 mod protocol;
 mod reliable;
+mod config;
 mod member;
 mod basic;
+
+pub use config::{Config, NodeId, parse_config};
 
 use protocol::{
     NetworkMessage, NetworkMessageType, MessageId, MessagePriority, 
     PriorityMessageType, PriorityRequestType, PriorityProposalType
 };
 use member::{MulticastMemberHandle, MemberStateMessage, MemberStateMessageType};
-use crate::{UserInput, Config, NodeId};
 use connection_pool::ConnectionPool;
 use reliable::ReliableMulticast;
+use crate::UserInput;
 
 use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel};
 use std::{collections::HashMap, cmp::Reverse};
@@ -19,7 +22,7 @@ use log::{trace, error, log_enabled, Level};
 use priority_queue::PriorityQueue;
 use tokio::select;
 
-type MulticastGroup = HashMap<String, MulticastMemberHandle>;
+type MulticastGroup = HashMap<NodeId, MulticastMemberHandle>;
 type IncomingChannel = UnboundedReceiver<MemberStateMessage>;
 
 struct QueuedMessage {
@@ -80,7 +83,7 @@ impl TotalOrderedMulticast {
     pub async fn new(node_id: NodeId, config: &Config, bank_snd: UnboundedSender<UserInput>) -> (Self, UnboundedSender<UserInput>) {
         let (to_multicast, from_cli) = unbounded_channel();
 
-        let (group, from_clients, client_snd_handle) = ConnectionPool::new(node_id.clone())
+        let (group, from_clients, client_snd_handle) = ConnectionPool::new(node_id)
             .connect(config)
             .await
             .consume();
@@ -106,7 +109,7 @@ impl TotalOrderedMulticast {
         self.next_local_id += 1;
         
         MessageId {
-            original_sender: self.node_id.clone(),
+            original_sender: self.node_id,
             local_id
         }
     }
@@ -117,7 +120,7 @@ impl TotalOrderedMulticast {
         
         MessagePriority {
             priority,
-            proposer: self.node_id.clone()
+            proposer: self.node_id
         }
     }
 
@@ -156,9 +159,9 @@ impl TotalOrderedMulticast {
         let local_id = self.get_local_id();
         let my_pri = self.get_next_priority();
 
-        self.pq.push(local_id.clone(), Reverse(my_pri.clone()));
+        self.pq.push(local_id, Reverse(my_pri));
         self.queued_messages.insert(
-            local_id.clone(), 
+            local_id, 
             QueuedMessage::new(msg.clone())
         );
         
@@ -170,11 +173,11 @@ impl TotalOrderedMulticast {
     fn propose_priority(&mut self, request: PriorityRequestType) {
         let requester_local_id = request.local_id;
         let priority = self.get_next_priority();
-        let recipient = requester_local_id.original_sender.clone();
+        let recipient = requester_local_id.original_sender;
 
-        self.pq.push(requester_local_id.clone(), Reverse(priority.clone()));
+        self.pq.push(requester_local_id, Reverse(priority));
         self.queued_messages.insert(
-            requester_local_id.clone(),
+            requester_local_id,
             QueuedMessage::new(request.message)
         );
 
@@ -192,7 +195,6 @@ impl TotalOrderedMulticast {
     fn confirmed_message_priority(&mut self, message_id: MessageId) {
         let agreed_pri = self.pq
             .get_priority(&message_id)
-            .cloned()
             .unwrap();
         
         self.reliable_multicast.broadcast(
@@ -223,7 +225,7 @@ impl TotalOrderedMulticast {
 
                                 // We are reversing the priority, so push decrease will be inverted 
                                 // and push if the new inner priority is greater than the old priority
-                                self.pq.push_decrease(mid.clone(), Reverse(m.priority));
+                                self.pq.push_decrease(mid, Reverse(m.priority));
                                 qm.increment_vote_count();
 
                                 if qm.get_vote_count() >= self.reliable_multicast.size() {

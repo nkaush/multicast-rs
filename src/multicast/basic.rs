@@ -1,5 +1,4 @@
-use super::{MulticastGroup, IncomingChannel, NetworkMessage, MemberStateMessage};
-use crate::NodeId;
+use super::{MulticastGroup, IncomingChannel, NetworkMessage, MemberStateMessage, NodeId};
 use log::trace;
 
 pub(super) struct BasicMulticast {
@@ -23,7 +22,7 @@ impl BasicMulticast {
         }
     }
 
-    pub fn broadcast(&self, msg: NetworkMessage, except: Option<Vec<String>>) {
+    pub fn broadcast(&self, msg: NetworkMessage, except: Option<Vec<NodeId>>) {
         match except {
             Some(except) => for handle in self.group.values() {
                 if !except.contains(&handle.member_id) {

@@ -1,9 +1,8 @@
 use super::{
     IncomingChannel, MulticastGroup, NetworkMessageType, NetworkMessage,
-    MemberStateMessage, MemberStateMessageType, basic::BasicMulticast
+    MemberStateMessage, MemberStateMessageType, basic::BasicMulticast, NodeId
 };
 use std::collections::HashMap;
-use crate::NodeId;
 use log::trace;
 
 /// A reliable multicast implementation that guarantees delivery to all 
@@ -64,23 +63,23 @@ impl ReliableMulticast {
                 return member_state;
             }
 
-            let msg_seq_num = msg.sequence_num.clone().unwrap();
+            let msg_seq_num = msg.sequence_num.unwrap();
 
-            let mut except = vec![member_state.member_id.clone()];
-            let original_sender = match &msg.forwarded_for {
+            let mut except = vec![member_state.member_id];
+            let original_sender = match msg.forwarded_for {
                 Some(original_sender) => {
-                    except.push(original_sender.clone());
+                    except.push(original_sender);
                     original_sender
                 },
-                None => &member_state.member_id
+                None => member_state.member_id
             };
 
-            if let Some(last_seq) = self.prior_seq.get(original_sender) {
+            if let Some(last_seq) = self.prior_seq.get(&original_sender) {
                 if last_seq >= &msg_seq_num {
                     trace!("\treliable got network message from {} ... skipping ... last_seq={} and msg.sequence_num={}", member_state.member_id, last_seq, msg_seq_num);
                     return MemberStateMessage {
                         msg: MemberStateMessageType::DuplicateMessage,
-                        member_id: original_sender.to_string()
+                        member_id: original_sender
                     }
                 }
             }

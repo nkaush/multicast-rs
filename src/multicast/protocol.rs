@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
-use crate::{UserInput, NodeId};
 use core::cmp::Ordering;
+use crate::UserInput;
+use super::NodeId;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum NetworkMessageType {
@@ -18,31 +19,31 @@ pub struct NetworkMessage {
     pub forwarded_for: Option<NodeId>
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PriorityRequestType {
     pub local_id: MessageId,
     pub message: UserInput
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PriorityProposalType {
     pub requester_local_id: MessageId,
     pub priority: MessagePriority
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PriorityMessageType {
     pub local_id: MessageId,
     pub priority: MessagePriority,
 }
 
-#[derive(Debug, Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct MessageId {
     pub original_sender: NodeId,
     pub local_id: usize
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct MessagePriority {
     pub priority: usize,
     pub proposer: NodeId

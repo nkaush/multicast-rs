@@ -1,6 +1,6 @@
 use super::{
-    member::{member_loop, MemberStateMessage, MulticastMemberData, MulticastMemberHandle},
-    MulticastGroup, IncomingChannel
+    member::{member_loop, MemberStateMessage, MulticastMemberData},
+    MulticastGroup, IncomingChannel, MulticastMemberHandle
 };
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
@@ -9,7 +9,7 @@ use tokio::{
 };
 use tokio_retry::{Retry, strategy::FixedInterval};
 use std::{collections::HashMap, net::SocketAddr};
-use crate::{Config, NodeId};
+use super::{Config, NodeId};
 use log::{trace, error};
 
 pub struct ConnectionPool {
@@ -38,7 +38,7 @@ impl ConnectionPool {
         (self.group, self.from_clients, self.client_snd_handle)
     }
 
-    async fn connect_to_node(this_node: String, node_id: String, host: String, port: u16, stream_snd: UnboundedSender<(TcpStream, String)>) {
+    async fn connect_to_node(this_node: NodeId, node_id: NodeId, host: String, port: u16, stream_snd: UnboundedSender<(TcpStream, NodeId)>) {
         let server_addr = format!("{host}:{port}");
         trace!("Connecting to {} at {}...", node_id, server_addr);
 
@@ -61,16 +61,16 @@ impl ConnectionPool {
         }
     }
 
-    fn admit_member(&mut self, socket: TcpStream, member_id: String) {
+    fn admit_member(&mut self, socket: TcpStream, member_id: NodeId) {
         let (to_client, from_engine) = unbounded_channel();
         let member_data = MulticastMemberData {
-            member_id: member_id.clone(),
+            member_id: member_id,
             to_engine: self.client_snd_handle.clone(),
             from_engine: from_engine
         };
 
         let handle = tokio::spawn(member_loop(socket, member_data));
-        self.group.insert(member_id.clone(), MulticastMemberHandle { 
+        self.group.insert(member_id, MulticastMemberHandle { 
             member_id,
             to_client,
             handle
@@ -78,9 +78,9 @@ impl ConnectionPool {
     }
 
     pub(super) async fn connect(mut self, config: &Config) -> Self {
-        let (_, port, to_connect_with) = config.get(&self.node_id).unwrap();
+        let node_config = config.get(&self.node_id).unwrap();
 
-        let bind_addr: SocketAddr = ([0, 0, 0, 0], *port).into();
+        let bind_addr: SocketAddr = ([0, 0, 0, 0], node_config.port).into();
         let tcp_listener = match TcpListener::bind(bind_addr).await {
             Ok(l) => l,
             Err(e) => {
@@ -91,11 +91,16 @@ impl ConnectionPool {
 
         let (stream_snd, mut stream_rcv) = unbounded_channel();
 
-        for node in to_connect_with.into_iter() {
-            let (host, port, _) = config.get(node).cloned().unwrap();
+        for node in node_config.connection_list.iter() {
+            let connect_config = config.get(&node).unwrap();
             let snd_clone = stream_snd.clone();
-            let tnc = self.node_id.clone();
-            tokio::spawn(Self::connect_to_node(tnc, node.to_string(), host, port, snd_clone));
+            tokio::spawn(Self::connect_to_node(
+                self.node_id, 
+                *node, 
+                connect_config.hostname.clone(), 
+                connect_config.port, 
+                snd_clone
+            ));
         }
         drop(stream_snd);
         
@@ -107,7 +112,13 @@ impl ConnectionPool {
                         let mut member_id = String::new();
                         match stream.read_line(&mut member_id).await {
                             Ok(0) | Err(_) => continue,
-                            Ok(_) => self.admit_member(stream.into_inner(), member_id.trim().into())
+                            Ok(_) => {
+                                let member_id: NodeId = member_id
+                                    .trim()
+                                    .parse()
+                                    .unwrap();
+                                self.admit_member(stream.into_inner(), member_id)
+                            }
                         }
 
                         if self.group.len() == config.len() - 1 { break self; }

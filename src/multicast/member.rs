@@ -4,9 +4,8 @@ use tokio::{
 };
 use tokio_util::codec::LengthDelimitedCodec;
 use futures::{stream::StreamExt, SinkExt};
-use super::NetworkMessage;
+use super::{NetworkMessage, NodeId};
 use log::{trace, error};
-use crate::NodeId;
 
 /// Represents any message types a member handler thread could send the multicast engine
 #[derive(Debug)]
@@ -50,10 +49,10 @@ pub(super) struct MulticastMemberData {
 }
 
 impl MulticastMemberData {
-    pub fn generate_state_msg(&self, msg: MemberStateMessageType) -> MemberStateMessage {
+    fn generate_state_msg(&self, msg: MemberStateMessageType) -> MemberStateMessage {
         MemberStateMessage {
             msg,
-            member_id: self.member_id.clone()
+            member_id: self.member_id
         }
     }
     
