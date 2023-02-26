@@ -59,7 +59,7 @@ impl<M> ReliableMulticast<M> {
         let member_state = self.basic.deliver().await;
         if let MemberStateMessageType::Message(msg) = &member_state.msg {
             if msg.sequence_num.is_none() {
-                trace!("\treliable got network message from {} ... one off message", member_state.member_id);
+                trace!("network message from node {} ... one off message", member_state.member_id);
                 return member_state;
             }
 
@@ -76,7 +76,7 @@ impl<M> ReliableMulticast<M> {
 
             if let Some(last_seq) = self.prior_seq.get(&original_sender) {
                 if last_seq >= &msg_seq_num {
-                    trace!("\treliable got network message from {} ... skipping ... last_seq={} and msg.sequence_num={}", member_state.member_id, last_seq, msg_seq_num);
+                    trace!("network message from node {} ... skipping ... last_seq={} and msg.sequence_num={}", member_state.member_id, last_seq, msg_seq_num);
                     return MemberStateMessage {
                         msg: MemberStateMessageType::DuplicateMessage,
                         member_id: original_sender
@@ -84,11 +84,11 @@ impl<M> ReliableMulticast<M> {
                 }
             }
 
-            trace!("\treliable got network message from {} ... got {:?}\n", member_state.member_id, msg);
+            trace!("network message from node {} ... got {:?}\n", member_state.member_id, msg);
 
-            self.prior_seq.insert(original_sender.into(), msg_seq_num);
+            self.prior_seq.insert(original_sender, msg_seq_num);
             let msg = NetworkMessage {
-                forwarded_for: Some(original_sender.into()),
+                forwarded_for: Some(original_sender),
                 sequence_num: msg.sequence_num,
                 msg_type: msg.msg_type.clone()
             };

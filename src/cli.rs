@@ -1,14 +1,14 @@
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio::sync::mpsc::{UnboundedSender};
 use futures::stream::StreamExt;
-use crate::UserInput;
+use crate::Transaction;
 
 pub struct Cli {
-    cli_send: UnboundedSender<UserInput>
+    cli_send: UnboundedSender<Transaction>
 }
 
 impl Cli {
-    pub fn new(cli_send: UnboundedSender<UserInput>) -> Self {
+    pub fn new(cli_send: UnboundedSender<Transaction>) -> Self {
         Self {
             cli_send,
         }
@@ -24,14 +24,14 @@ impl Cli {
                 .collect();
 
             match delimited[..] {
-                ["DEPOSIT", from, amt] => {
-                    if let Ok(amt) = amt.parse() {
-                        self.cli_send.send(UserInput::Deposit(from.to_string(), amt)).unwrap()
+                ["DEPOSIT", account, amt] => {
+                    if let Ok(amount) = amt.parse() {
+                        self.cli_send.send(Transaction::new_deposit(account, amount)).unwrap()
                     }
                 },
                 ["TRANSFER", from, "->", to, amt] => {
-                    if let Ok(amt) = amt.parse() {
-                        self.cli_send.send(UserInput::Transfer(from.to_string(), to.to_string(), amt)).unwrap();
+                    if let Ok(amount) = amt.parse() {
+                        self.cli_send.send(Transaction::new_transfer(from, to, amount)).unwrap();
                     }
                 },
                 _ => ()
