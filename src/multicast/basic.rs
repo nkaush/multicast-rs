@@ -18,7 +18,7 @@ impl<M> BasicMulticast<M> {
 
     pub fn send_single(&self, msg: NetworkMessage<M>, recipient: &NodeId) where M: fmt::Debug {
         if let Some(handle) = self.group.get(recipient) {
-            trace!("\tsending message to {}: {:?}\n", handle.member_id, msg);
+            trace!("sending message to {}: {:?}\n", handle.member_id, msg);
             handle.pass_message(msg).unwrap();
         }
     }
@@ -27,12 +27,12 @@ impl<M> BasicMulticast<M> {
         match except {
             Some(except) => for handle in self.group.values() {
                 if !except.contains(&handle.member_id) {
-                    trace!("\tsending message to {}: {:?}\n", handle.member_id, msg);
+                    trace!("sending message to {}: {:?}\n", handle.member_id, msg);
                     handle.pass_message(msg.clone()).unwrap();
                 }
             },
             None => for handle in self.group.values() {
-                trace!("\tsending message to {}: {:?}\n", handle.member_id, msg);
+                trace!("sending message to {}: {:?}\n", handle.member_id, msg);
                 handle.pass_message(msg.clone()).unwrap();
             }
         }

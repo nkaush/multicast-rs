@@ -1,6 +1,11 @@
-use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel};
+use tokio::{
+    sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel},
+    io::{BufWriter, AsyncWriteExt}, fs::File
+};
 use serde::{Serialize, Deserialize};
 use std::collections::BTreeMap;
+use crate::multicast::NodeId;
+use std::io::Cursor;
 use log::trace;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -11,39 +16,35 @@ pub enum TransactionType {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Transaction {
-    tr: TransactionType,
-    timestamp: f64
-}
-
-impl Transaction {
-    pub fn new_deposit(account: &str, amount: usize) -> Self {
-        Self {
-            tr: TransactionType::Deposit(account.into(), amount),
-            timestamp: crate::get_timestamp()
-        }
-    }
-
-    pub fn new_transfer(from: &str, to: &str, amount: usize) -> Self {
-        Self {
-            tr: TransactionType::Transfer(from.into(), to.into(), amount),
-            timestamp: crate::get_timestamp()
-        }
-    }
+    pub node_id: NodeId,
+    pub id: usize,
+    pub timestamp: f64,
+    pub tr: TransactionType
 }
 
 pub struct Bank {
     rcv: UnboundedReceiver<Transaction>,
-    accounts: BTreeMap<String, usize>
+    accounts: BTreeMap<String, usize>,
+    latency_log: BufWriter<File>
 }
 
 impl Bank {
-    pub fn new() -> (Self, UnboundedSender<Transaction>) {
+    pub async fn new() -> (Self, UnboundedSender<Transaction>) {
         let (snd, rcv) = unbounded_channel();
         let this = Self {
             rcv,
-            accounts: BTreeMap::new()
+            accounts: BTreeMap::new(),
+            latency_log: BufWriter::new(File::create("latencies.log").await.unwrap())
         };
         (this, snd)
+    }
+
+    async fn log_latency(&mut self, tx: &Transaction) {
+        let latency = crate::get_timestamp() - tx.timestamp;
+        let log_line = format!("n{}-t{},{}", tx.node_id, tx.id, latency);
+
+        let mut cursor = Cursor::new(log_line);
+        self.latency_log.write_all_buf(&mut cursor).await.unwrap();
     }
 
     fn print_balances(&self) {
@@ -56,6 +57,7 @@ impl Bank {
 
     pub async fn main_loop(&mut self) {
         while let Some(sample) = self.rcv.recv().await {
+            self.log_latency(&sample).await;
             match sample.tr {
                 TransactionType::Deposit(person, amt) => {
                     trace!("[BANK] DEPOSIT {} {}", person, amt);

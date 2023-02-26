@@ -19,9 +19,9 @@ async fn main() {
         }
     };
 
-    let (mut bank, bank_snd) = Bank::new();
+    let (mut bank, bank_snd) = Bank::new().await;
     let (mut multicast, multicast_snd) = TotalOrderedMulticast::new(node_id, &config, bank_snd).await;
-    let mut cli = Cli::new(multicast_snd);
+    let mut cli = Cli::new(node_id, multicast_snd);
 
     select! {
         _ = cli.taking_input() => (),

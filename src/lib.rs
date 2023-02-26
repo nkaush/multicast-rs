@@ -3,7 +3,7 @@ pub mod bank;
 pub mod cli;
 
 pub use multicast::{TotalOrderedMulticast, parse_config};
-pub use bank::{Bank, Transaction};
+pub use bank::{Bank, Transaction, TransactionType};
 pub use cli::Cli;
 
 pub fn get_timestamp() -> f64 {
