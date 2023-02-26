@@ -4,6 +4,7 @@ use tokio::{select, signal};
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 3 {
         eprintln!("Usage: {} <identifier> <configuration file>", args[0]);
