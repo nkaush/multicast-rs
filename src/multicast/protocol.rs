@@ -1,5 +1,4 @@
 use serde::{Serialize, Deserialize};
-use crate::{UserInput, NodeId};
 use core::cmp::Ordering;
 use super::NodeId;
 
