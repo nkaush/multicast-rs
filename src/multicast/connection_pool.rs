@@ -1,25 +1,25 @@
 use super::{
     member::{member_loop, MulticastMemberData}, Config, NodeId,
-    MulticastMemberHandle, MemberStateMessage
+    MulticastMemberHandle, MemberStateMessage, MulticastGroup
 };
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
     io::{AsyncWriteExt, AsyncBufReadExt, BufStream},
     net::{TcpStream, TcpListener}, select
 };
-use std::{collections::HashMap, net::SocketAddr, fmt};
 use tokio_retry::{Retry, strategy::FixedInterval};
 use serde::{Serialize, de::DeserializeOwned};
+use std::{net::SocketAddr, fmt};
 use log::{trace, error};
 
 pub(super) struct ConnectionPool<M> {
-    pub group: HashMap<NodeId, MulticastMemberHandle<M>>,
+    pub group: MulticastGroup<M>,
     pub node_id: NodeId,
     pub from_members: UnboundedReceiver<MemberStateMessage<M>>,
     pub client_snd_handle: UnboundedSender<MemberStateMessage<M>>
 }
 
-static CONNECTION_RETRY_ATTEMPS: usize = 200;
+static CONNECTION_RETRY_ATTEMPS: usize = 600;
 static CONNECTION_RETRY_DELAY_MS: u64 = 100;
 
 impl<M> ConnectionPool<M> {
