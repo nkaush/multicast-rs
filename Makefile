@@ -5,7 +5,7 @@ $(warning - Or visit https://www.rust-lang.org/tools/install for more on install
 $(error Unable to invoke cargo)
 endif
 
-.PHONY: mp1_node 
+.PHONY: mp1_node clean
 
 mp1_node:
 	cargo build --release
@@ -13,4 +13,4 @@ mp1_node:
 
 clean:
 	cargo clean
-	rm -f mp1_node metrics.json
+	rm -f mp1_node Cargo.lock

@@ -1,5 +1,5 @@
 target
 Cargo.lock
 mp1_node
-*.log
-!metrics/
+./*.log
+log*.log
