@@ -16,7 +16,7 @@ use connection_pool::ConnectionPool;
 use reliable::ReliableMulticast;
 
 use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel};
-use std::{collections::HashMap, cmp::Reverse, fmt};
+use std::{collections::{HashSet, HashMap}, cmp::Reverse, fmt};
 use serde::{Serialize, de::DeserializeOwned};
 use log::{trace, error, log_enabled, Level};
 use priority_queue::PriorityQueue;
@@ -27,25 +27,21 @@ type IncomingChannel<M> = UnboundedReceiver<MemberStateMessage<M>>;
 
 struct QueuedMessage<M> {
     message: M,
-    vote_count: usize,
-    is_deliverable: bool
+    is_deliverable: bool,
+    votes: HashSet<NodeId>
 }
 
 impl<M> QueuedMessage<M> {
     fn new(message: M) -> Self {
         Self {
             message,
-            vote_count: 0,
-            is_deliverable: false
+            is_deliverable: false,
+            votes: Default::default()
         }
     }
 
-    fn increment_vote_count(&mut self) {
-        self.vote_count += 1;
-    }
-
-    fn get_vote_count(&self) -> usize {
-        self.vote_count
+    fn add_voter(&mut self, voter: NodeId) {
+        self.votes.insert(voter);
     }
 
     fn is_deliverable(&self) -> bool {
@@ -76,7 +72,7 @@ pub struct TotalOrderedMulticast<M> {
     to_bank: UnboundedSender<M>,
     
     /// Hold on to the send handle so we always know we can receive messages
-    client_snd_handle: UnboundedSender<MemberStateMessage<M>>,
+    _client_snd_handle: UnboundedSender<MemberStateMessage<M>>,
 }
 
 impl<M> TotalOrderedMulticast<M> {
@@ -97,7 +93,7 @@ impl<M> TotalOrderedMulticast<M> {
             next_priority_proposal: 0,
             queued_messages: HashMap::new(),
             to_bank: bank_snd,
-            client_snd_handle: pool.client_snd_handle
+            _client_snd_handle: pool.client_snd_handle
         };
 
         (this, to_multicast)
@@ -135,6 +131,14 @@ impl<M> TotalOrderedMulticast<M> {
             pq_str += format!("(NODE={} ID={} PRI={} BY={}) ", id.original_sender, id.local_id, pri.0.priority, pri.0.proposer).as_str();
         }
         trace!("{}", pq_str);
+    }
+
+    fn recheck_pq_delivery_status(&mut self) {
+        for qm in self.queued_messages.values_mut() {
+            if qm.votes.is_superset(self.reliable_multicast.members()) {
+                qm.mark_deliverable();
+            }
+        }
     }
 
     fn try_empty_pq(&mut self) where M: fmt::Debug {
@@ -225,9 +229,9 @@ impl<M> TotalOrderedMulticast<M> {
                                 // We are reversing the priority, so push decrease will be inverted 
                                 // and push if the new inner priority is greater than the old priority
                                 self.pq.push_decrease(mid, Reverse(m.priority));
-                                qm.increment_vote_count();
+                                qm.add_voter(msg.member_id);
 
-                                if qm.get_vote_count() >= self.reliable_multicast.size() {
+                                if qm.votes.is_superset(self.reliable_multicast.members()) {
                                     qm.mark_deliverable();
                                     
                                     self.confirmed_message_priority(mid);
@@ -251,6 +255,8 @@ impl<M> TotalOrderedMulticast<M> {
                     MemberStateMessageType::NetworkError => {
                         // remove the client from the group if it encounters a network error
                         self.reliable_multicast.remove_member(&msg.member_id);
+                        self.recheck_pq_delivery_status();
+                        self.try_empty_pq();
                     },
                     MemberStateMessageType::DuplicateMessage => ()
                 }

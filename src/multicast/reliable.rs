@@ -2,7 +2,7 @@ use super::{
     IncomingChannel, MulticastGroup, NetworkMessageType, NetworkMessage,
     MemberStateMessage, MemberStateMessageType, basic::BasicMulticast, NodeId
 };
-use std::{collections::HashMap, fmt};
+use std::{collections::{HashSet, HashMap}, fmt};
 use log::trace;
 
 /// A reliable multicast implementation that guarantees delivery to all 
@@ -21,10 +21,6 @@ impl<M> ReliableMulticast<M> {
             prior_seq: HashMap::new(),
             next_seq_num: 0
         }
-    }
-
-    pub fn size(&self) -> usize {
-        self.basic.size()
     }
 
     fn get_next_seq_num(&mut self) -> Option<usize> {
@@ -53,6 +49,10 @@ impl<M> ReliableMulticast<M> {
 
     pub fn remove_member(&mut self, member_id: &NodeId) {
         self.basic.remove_member(member_id);
+    }
+
+    pub fn members(&self) -> &HashSet<NodeId> {
+        &self.basic.members()
     }
 
     pub async fn deliver(&mut self) -> MemberStateMessage<M> where M: Clone + fmt::Debug {
