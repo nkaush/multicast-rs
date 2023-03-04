@@ -76,12 +76,13 @@ pub struct TotalOrderedMulticast<M> {
 }
 
 impl<M> TotalOrderedMulticast<M> {
-    pub async fn new(node_id: NodeId, config: &Config, bank_snd: UnboundedSender<M>) -> (Self, UnboundedSender<M>) where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
+    pub async fn new(node_id: NodeId, config: &Config, bank_snd: UnboundedSender<M>) ->(Self, UnboundedSender<M>) where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
         let (to_multicast, from_cli) = unbounded_channel();
 
         let pool = ConnectionPool::new(node_id)
             .connect(config)
             .await;
+
         trace!("finished connecting to group!");
 
         let this = Self {

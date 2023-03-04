@@ -5,11 +5,11 @@ use super::{
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
     io::{AsyncWriteExt, AsyncBufReadExt, BufStream},
-    net::{TcpStream, TcpListener}, select
+    net::{TcpStream, TcpListener}, select, time::timeout
 };
 use tokio_retry::{Retry, strategy::FixedInterval};
+use std::{net::SocketAddr, fmt, time::Duration};
 use serde::{Serialize, de::DeserializeOwned};
-use std::{net::SocketAddr, fmt};
 use log::{trace, error};
 
 pub(super) struct ConnectionPool<M> {
@@ -19,7 +19,7 @@ pub(super) struct ConnectionPool<M> {
     pub client_snd_handle: UnboundedSender<MemberStateMessage<M>>
 }
 
-static CONNECTION_RETRY_ATTEMPS: usize = 600;
+static CONNECTION_POOL_INIT_TIMEOUT_SECS: u64 = 60;
 static CONNECTION_RETRY_DELAY_MS: u64 = 100;
 
 impl<M> ConnectionPool<M> {
@@ -38,9 +38,7 @@ impl<M> ConnectionPool<M> {
         let server_addr = format!("{host}:{port}");
         trace!("Connecting to {} at {}...", node_id, server_addr);
 
-        let retry_strategy = FixedInterval::from_millis(CONNECTION_RETRY_DELAY_MS)
-            .take(CONNECTION_RETRY_ATTEMPS);
-
+        let retry_strategy = FixedInterval::from_millis(CONNECTION_RETRY_DELAY_MS);
         match Retry::spawn(retry_strategy, || TcpStream::connect(&server_addr)).await {
             Ok(mut stream) => {
                 trace!("Connected to {} at {}", node_id, server_addr);
@@ -51,7 +49,7 @@ impl<M> ConnectionPool<M> {
                 stream_snd.send((stream, node_id)).unwrap();
             },
             Err(e) => {
-                error!("Failed to connect to {}: {:?}", server_addr, e);
+                eprintln!("Failed to connect to {}: {:?}... Stopping.", server_addr, e);
                 std::process::exit(1);
             }
         }
@@ -73,14 +71,14 @@ impl<M> ConnectionPool<M> {
         });
     }
 
-    pub(super) async fn connect(mut self, config: &Config) -> Self where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
+    async fn priv_connect(mut self, config: &Config) -> Self where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
         let node_config = config.get(&self.node_id).unwrap();
 
         let bind_addr: SocketAddr = ([0, 0, 0, 0], node_config.port).into();
         let tcp_listener = match TcpListener::bind(bind_addr).await {
             Ok(l) => l,
             Err(e) => {
-                error!("Failed to bind to {}: {:?}", bind_addr, e);
+                eprintln!("Failed to bind to {}: {:?}", bind_addr, e);
                 std::process::exit(1);
             }
         };
@@ -106,6 +104,7 @@ impl<M> ConnectionPool<M> {
                     Ok((stream, _addr)) => {
                         let mut stream = BufStream::new(stream);
                         let mut member_id = String::new();
+
                         match stream.read_line(&mut member_id).await {
                             Ok(0) | Err(_) => continue,
                             Ok(_) => {
@@ -130,5 +129,16 @@ impl<M> ConnectionPool<M> {
                 }
             }
         } 
+    }
+
+    pub(super) async fn connect(self, config: &Config) -> Self where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
+        let time_limit = Duration::from_secs(CONNECTION_POOL_INIT_TIMEOUT_SECS);
+        match timeout(time_limit, self.priv_connect(config)).await {
+            Ok(p) => p,
+            Err(_) => {
+                eprintln!("Failed to connect to all nodes within {}s... Stopping.", CONNECTION_POOL_INIT_TIMEOUT_SECS);
+                std::process::exit(1);
+            }
+        }
     }
 }

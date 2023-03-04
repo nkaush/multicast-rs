@@ -84,7 +84,7 @@ impl<M> ReliableMulticast<M> {
                 }
             }
 
-            trace!("network message from node {} ... got {:?}\n", member_state.member_id, msg);
+            trace!("network message from node {} ... got {:?}", member_state.member_id, msg);
 
             self.prior_seq.insert(original_sender, msg_seq_num);
             let msg = NetworkMessage {
