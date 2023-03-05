@@ -4,6 +4,7 @@ use std::fs::File;
 
 pub type NodeId = usize;
 
+#[derive(Clone)]
 pub struct NodeConfiguration {
     pub node_id: NodeId,
     pub hostname: String,
