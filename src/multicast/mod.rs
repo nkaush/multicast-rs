@@ -177,7 +177,10 @@ impl<M> TotalOrderedMulticast<M> {
 
     fn recheck_pq_delivery_status(&mut self) where M: Clone + fmt::Debug {
         let to_confirm = self.queued_messages.iter_mut()
-            .filter(|(_, qm)| qm.votes.is_superset(self.reliable_multicast.members()))
+            .filter(|(_, qm)| 
+                qm.votes.is_superset(self.reliable_multicast.members())
+                    && !qm.is_deliverable()
+            )
             .map(|(mid, qm)| {
                 qm.mark_deliverable();
                 mid.clone()
@@ -290,13 +293,14 @@ impl<M> TotalOrderedMulticast<M> {
                                 let mid = m.local_id;
                                 self.sync_next_priority(&m.priority);
 
-                                self.queued_messages
-                                    .get_mut(&mid)
-                                    .unwrap()
-                                    .mark_deliverable();
-
-                                self.pq.push_decrease(mid, Reverse(m.priority));
-                                self.try_empty_pq();
+                                match self.queued_messages.get_mut(&mid) {
+                                    Some(qm) => {
+                                        qm.mark_deliverable();
+                                        self.pq.push_decrease(mid, Reverse(m.priority));
+                                        self.try_empty_pq();
+                                    },
+                                    None => error!("Attempt to retrieve message with id = {:?} from queued_messages failed", mid)
+                                }
                             }
                         }
                     },
