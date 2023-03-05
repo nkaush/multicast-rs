@@ -129,7 +129,16 @@ impl<M> TotalOrderedMulticast<M> {
     fn print_pq(&self) {
         let mut pq_str = String::new();
         for (id, pri) in self.pq.clone().into_sorted_iter() {
-            pq_str += format!("(NODE={} ID={} PRI={} BY={}) ", id.original_sender, id.local_id, pri.0.priority, pri.0.proposer).as_str();
+            let qm = self.queued_messages.get(&id).unwrap();
+            pq_str += format!(
+                "(NODE={} ID={} PRI={} BY={} V={:?} D={}) ", 
+                id.original_sender, 
+                id.local_id, 
+                pri.0.priority, 
+                pri.0.proposer, 
+                qm.votes,
+                qm.is_deliverable()
+            ).as_str();
         }
         trace!("{}", pq_str);
     }
