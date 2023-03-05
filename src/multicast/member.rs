@@ -78,6 +78,7 @@ pub(super) async fn member_loop<M>(socket: TcpStream, mut member_data: Multicast
                 let bytes = bincode::serialize(&to_send).unwrap();
                 if stream.send(bytes.into()).await.is_err() {
                     member_data.notify_network_error().unwrap();
+                    break;
                 }
             },
             received = stream.next() => match received {
@@ -91,7 +92,10 @@ pub(super) async fn member_loop<M>(socket: TcpStream, mut member_data: Multicast
                     };
                     member_data.notify_client_message(msg).unwrap();
                 },
-                _ => member_data.notify_network_error().unwrap()
+                _ => {
+                    member_data.notify_network_error().unwrap();
+                    break;
+                }
             }
         }
     }
