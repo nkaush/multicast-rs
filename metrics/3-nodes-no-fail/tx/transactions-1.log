@@ -1,0 +1,142 @@
+BALANCES f:15 
+BALANCES f:15 k:46 
+BALANCES d:24 f:15 k:46 
+BALANCES d:24 f:15 h:47 k:46 
+BALANCES d:24 f:15 h:47 k:35 l:11 
+BALANCES d:42 f:15 h:47 k:17 l:11 
+BALANCES d:42 e:73 f:15 h:47 k:17 l:11 
+BALANCES d:35 e:73 f:15 h:47 k:17 l:11 z:7 
+BALANCES c:1 d:35 e:73 f:14 h:47 k:17 l:11 z:7 
+BALANCES c:1 d:35 e:73 f:10 h:47 k:17 l:15 z:7 
+BALANCES b:6 c:1 d:35 e:73 f:10 h:41 k:17 l:15 z:7 
+BALANCES b:6 c:1 d:35 e:73 f:10 h:41 k:17 l:105 z:7 
+BALANCES b:6 c:1 d:35 e:73 f:10 h:41 j:3 k:17 l:105 z:4 
+BALANCES b:6 c:1 d:130 e:73 f:10 h:41 j:3 k:17 l:105 z:4 
+BALANCES b:6 c:1 d:130 e:73 f:10 h:41 j:3 k:17 l:105 q:50 z:4 
+BALANCES b:6 c:1 d:130 e:73 f:10 h:41 j:2 k:18 l:105 q:50 z:4 
+BALANCES b:6 c:1 d:130 e:73 f:10 h:41 j:2 k:18 l:105 q:50 w:59 z:4 
+BALANCES b:6 c:1 d:130 e:73 f:10 h:41 j:2 k:65 l:105 q:3 w:59 z:4 
+BALANCES b:6 c:1 d:130 e:73 f:10 h:41 j:2 k:65 l:105 q:3 w:59 x:50 z:4 
+BALANCES b:6 c:1 d:130 e:73 f:10 h:41 j:1 k:65 l:105 q:3 w:60 x:50 z:4 
+BALANCES b:5 c:1 d:130 e:73 f:10 h:41 j:1 k:65 l:105 q:3 s:1 w:60 x:50 z:4 
+BALANCES b:5 c:1 d:130 e:73 f:10 h:41 j:1 k:65 l:102 q:3 s:1 w:60 x:50 y:3 z:4 
+BALANCES b:5 c:1 d:130 e:73 f:0 h:41 i:10 j:1 k:65 l:102 q:3 s:1 w:60 x:50 y:3 z:4 
+BALANCES b:5 c:1 d:130 e:73 f:0 g:99 h:41 i:10 j:1 k:65 l:3 q:3 s:1 w:60 x:50 y:3 z:4 
+BALANCES b:5 c:1 d:130 e:73 f:0 g:99 h:72 i:10 j:1 k:65 l:3 q:3 s:1 w:60 x:50 y:3 z:4 
+BALANCES b:5 c:1 d:130 e:73 f:0 g:99 h:72 i:10 j:1 k:65 l:92 q:3 s:1 w:60 x:50 y:3 z:4 
+BALANCES b:5 c:1 d:130 e:73 f:0 g:99 h:72 i:71 j:1 k:65 l:92 q:3 s:1 w:60 x:50 y:3 z:4 
+BALANCES b:5 c:1 d:130 e:73 f:0 g:99 h:72 i:71 j:70 k:65 l:92 q:3 s:1 w:60 x:50 y:3 z:4 
+BALANCES b:5 c:1 d:130 e:73 f:0 g:99 h:72 i:71 j:70 k:65 l:92 q:3 s:1 v:40 w:60 x:50 y:3 z:4 
+BALANCES b:5 c:1 d:130 e:73 f:0 g:99 h:72 i:71 j:70 k:18 l:92 q:3 s:1 v:87 w:60 x:50 y:3 z:4 
+BALANCES b:5 c:1 d:130 e:65 f:0 g:99 h:72 i:71 j:70 k:18 l:92 q:3 s:1 v:87 w:60 x:58 y:3 z:4 
+BALANCES b:5 c:1 d:130 e:65 f:0 g:99 h:72 i:71 j:70 k:18 l:93 q:3 s:1 v:87 w:60 x:58 y:2 z:4 
+BALANCES b:5 c:19 d:130 e:65 f:0 g:99 h:72 i:71 j:70 k:18 l:93 q:3 s:1 v:87 w:60 x:40 y:2 z:4 
+BALANCES b:5 c:19 d:130 e:65 f:0 g:99 h:72 i:71 j:70 k:18 l:93 q:3 s:1 t:33 v:87 w:27 x:40 y:2 z:4 
+BALANCES b:5 c:19 d:113 e:65 f:0 g:99 h:72 i:71 j:70 k:18 l:93 p:17 q:3 s:1 t:33 v:87 w:27 x:40 y:2 z:4 
+BALANCES b:5 c:19 d:113 e:65 f:35 g:99 h:72 i:71 j:70 k:18 l:93 p:17 q:3 s:1 t:33 v:87 w:27 x:40 y:2 z:4 
+BALANCES b:5 c:19 d:134 e:65 f:35 g:99 h:72 i:71 j:70 k:18 l:93 p:17 q:3 s:1 t:33 v:87 w:27 x:40 y:2 z:4 
+BALANCES b:5 c:19 d:134 e:65 f:35 g:99 h:72 i:71 j:70 k:18 l:91 p:17 q:3 r:2 s:1 t:33 v:87 w:27 x:40 y:2 z:4 
+BALANCES b:5 c:19 d:134 e:65 f:35 g:99 h:72 i:71 j:70 k:18 l:91 o:35 p:17 q:3 r:2 s:1 t:33 v:87 w:27 x:40 y:2 z:4 
+BALANCES b:5 c:19 d:134 e:65 f:35 g:99 h:72 i:71 j:152 k:18 l:9 o:35 p:17 q:3 r:2 s:1 t:33 v:87 w:27 x:40 y:2 z:4 
+BALANCES b:5 c:18 d:134 e:65 f:35 g:100 h:72 i:71 j:152 k:18 l:9 o:35 p:17 q:3 r:2 s:1 t:33 v:87 w:27 x:40 y:2 z:4 
+BALANCES b:5 c:18 d:134 e:65 f:35 g:100 h:72 i:71 j:152 k:18 l:9 o:35 p:17 q:3 r:2 s:1 t:33 v:87 w:48 x:40 y:2 z:4 
+BALANCES b:5 c:18 d:134 e:65 f:4 g:100 h:72 i:71 j:152 k:18 l:9 o:35 p:17 q:3 r:2 s:1 t:33 v:87 w:79 x:40 y:2 z:4 
+BALANCES b:5 c:18 d:134 e:65 f:4 g:100 h:72 i:52 j:152 k:18 l:9 o:35 p:17 q:3 r:21 s:1 t:33 v:87 w:79 x:40 y:2 z:4 
+BALANCES b:7 c:18 d:134 e:65 f:4 g:100 h:72 i:52 j:152 k:18 l:9 o:35 p:17 q:3 r:19 s:1 t:33 v:87 w:79 x:40 y:2 z:4 
+BALANCES b:7 c:18 d:134 e:65 f:4 g:100 h:72 i:52 j:152 k:18 l:9 o:35 p:17 q:75 r:19 s:1 t:33 v:87 w:79 x:40 y:2 z:4 
+BALANCES b:7 c:18 d:134 e:65 f:4 g:19 h:72 i:52 j:152 k:18 l:9 o:35 p:17 q:156 r:19 s:1 t:33 v:87 w:79 x:40 y:2 z:4 
+BALANCES b:7 c:18 d:134 e:65 f:4 g:19 h:72 i:52 j:152 k:18 l:9 o:35 p:17 q:200 r:19 s:1 t:33 v:87 w:79 x:40 y:2 z:4 
+BALANCES b:7 c:18 d:134 e:65 f:4 g:19 h:72 i:52 j:152 k:18 l:9 o:35 p:17 q:204 r:19 s:1 t:33 v:83 w:79 x:40 y:2 z:4 
+BALANCES b:7 c:18 d:134 e:65 f:4 g:19 h:72 i:52 j:152 k:18 l:9 n:21 o:35 p:17 q:204 r:19 s:1 t:12 v:83 w:79 x:40 y:2 z:4 
+BALANCES b:7 c:18 d:140 e:65 f:4 g:19 h:72 i:52 j:152 k:18 l:9 n:21 o:35 p:17 q:198 r:19 s:1 t:12 v:83 w:79 x:40 y:2 z:4 
+BALANCES b:7 c:18 d:100 e:65 f:4 g:19 h:72 i:52 j:192 k:18 l:9 n:21 o:35 p:17 q:198 r:19 s:1 t:12 v:83 w:79 x:40 y:2 z:4 
+BALANCES b:38 c:18 d:100 e:65 f:4 g:19 h:72 i:21 j:192 k:18 l:9 n:21 o:35 p:17 q:198 r:19 s:1 t:12 v:83 w:79 x:40 y:2 z:4 
+BALANCES b:38 c:18 d:100 e:65 f:4 g:19 h:72 i:21 j:192 k:18 l:9 m:1 n:21 o:35 p:17 q:198 r:19 s:0 t:12 v:83 w:79 x:40 y:2 z:4 
+BALANCES b:38 c:18 d:100 e:59 f:4 g:19 h:72 i:21 j:192 k:18 l:9 m:1 n:21 o:35 p:17 q:198 r:19 s:0 t:12 v:83 w:85 x:40 y:2 z:4 
+BALANCES b:38 c:18 d:100 e:59 f:4 g:19 h:72 i:21 j:192 k:18 l:9 m:1 n:21 o:35 p:17 q:198 r:19 s:0 t:12 v:83 w:84 x:40 y:2 z:5 
+BALANCES b:38 c:18 d:91 e:59 f:4 g:19 h:72 i:21 j:192 k:18 l:9 m:1 n:21 o:35 p:26 q:198 r:19 s:0 t:12 v:83 w:84 x:40 y:2 z:5 
+BALANCES b:38 c:18 d:91 e:59 f:80 g:19 h:72 i:21 j:192 k:18 l:9 m:1 n:21 o:35 p:26 q:198 r:19 s:0 t:12 v:83 w:84 x:40 y:2 z:5 
+BALANCES b:38 c:18 d:91 e:59 f:80 g:19 h:72 i:21 j:192 k:18 l:9 m:1 n:21 o:35 p:26 q:198 r:19 s:0 t:16 v:83 w:80 x:40 y:2 z:5 
+BALANCES b:38 c:18 d:91 e:129 f:10 g:19 h:72 i:21 j:192 k:18 l:9 m:1 n:21 o:35 p:26 q:198 r:19 s:0 t:16 v:83 w:80 x:40 y:2 z:5 
+BALANCES b:38 c:18 d:91 e:129 f:12 g:19 h:72 i:21 j:192 k:18 l:9 m:1 n:21 o:35 p:26 q:198 r:19 s:0 t:16 v:83 w:80 x:38 y:2 z:5 
+BALANCES b:38 c:18 d:91 e:129 f:12 g:19 h:72 i:21 j:192 k:18 l:9 m:1 n:21 o:35 p:26 q:198 r:19 s:0 t:16 v:85 w:80 x:38 y:0 z:5 
+BALANCES b:38 c:18 d:91 e:129 f:12 g:19 h:72 i:12 j:192 k:18 l:9 m:1 n:21 o:35 p:26 q:207 r:19 s:0 t:16 v:85 w:80 x:38 y:0 z:5 
+BALANCES b:38 c:18 d:91 e:129 f:12 g:19 h:72 i:12 j:192 k:18 l:9 m:1 n:21 o:24 p:26 q:207 r:30 s:0 t:16 v:85 w:80 x:38 y:0 z:5 
+BALANCES b:38 c:18 d:91 e:129 f:12 g:19 h:72 i:12 j:192 k:18 l:9 m:1 n:21 o:24 p:26 q:206 r:30 s:0 t:16 v:85 w:80 x:39 y:0 z:5 
+BALANCES b:40 c:18 d:91 e:129 f:12 g:17 h:72 i:12 j:192 k:18 l:9 m:1 n:21 o:24 p:26 q:206 r:30 s:0 t:16 v:85 w:80 x:39 y:0 z:5 
+BALANCES b:40 c:18 d:91 e:129 f:12 g:17 h:72 i:12 j:192 k:18 l:9 m:1 n:21 o:24 p:26 q:206 r:30 s:0 t:21 v:85 w:80 x:34 y:0 z:5 
+BALANCES b:40 c:18 d:91 e:129 f:12 g:17 h:72 i:12 j:192 k:18 l:9 m:1 n:21 o:24 p:11 q:206 r:30 s:15 t:21 v:85 w:80 x:34 y:0 z:5 
+BALANCES b:40 c:74 d:91 e:129 f:12 g:17 h:72 i:12 j:192 k:18 l:9 m:1 n:21 o:24 p:11 q:150 r:30 s:15 t:21 v:85 w:80 x:34 y:0 z:5 
+BALANCES a:5 b:40 c:74 d:86 e:129 f:12 g:17 h:72 i:12 j:192 k:18 l:9 m:1 n:21 o:24 p:11 q:150 r:30 s:15 t:21 v:85 w:80 x:34 y:0 z:5 
+BALANCES a:5 b:40 c:74 d:143 e:129 f:12 g:17 h:72 i:12 j:192 k:18 l:9 m:1 n:21 o:24 p:11 q:93 r:30 s:15 t:21 v:85 w:80 x:34 y:0 z:5 
+BALANCES a:43 b:40 c:74 d:143 e:129 f:12 g:17 h:72 i:12 j:192 k:18 l:9 m:1 n:21 o:24 p:11 q:93 r:30 s:15 t:21 v:85 w:42 x:34 y:0 z:5 
+BALANCES a:43 b:40 c:74 d:127 e:129 f:12 g:17 h:72 i:12 j:192 k:18 l:9 m:1 n:37 o:24 p:11 q:93 r:30 s:15 t:21 v:85 w:42 x:34 y:0 z:5 
+BALANCES a:43 b:40 c:74 d:127 e:129 f:12 g:17 h:72 i:12 j:192 k:24 l:3 m:1 n:37 o:24 p:11 q:93 r:30 s:15 t:21 v:85 w:42 x:34 y:0 z:5 
+BALANCES a:43 b:40 c:74 d:127 e:43 f:12 g:17 h:72 i:12 j:192 k:24 l:3 m:1 n:37 o:24 p:11 q:93 r:30 s:15 t:21 v:85 w:42 x:120 y:0 z:5 
+BALANCES a:43 b:40 c:74 d:127 e:43 f:12 g:17 h:72 i:12 j:192 k:7 l:3 m:1 n:54 o:24 p:11 q:93 r:30 s:15 t:21 v:85 w:42 x:120 y:0 z:5 
+BALANCES a:43 b:40 c:74 d:127 e:43 f:12 g:17 h:68 i:12 j:192 k:7 l:3 m:1 n:54 o:28 p:11 q:93 r:30 s:15 t:21 v:85 w:42 x:120 y:0 z:5 
+BALANCES a:43 b:40 c:74 d:127 e:43 f:12 g:17 h:68 i:12 j:192 k:7 l:3 m:1 n:54 o:28 p:11 q:93 r:30 s:15 t:21 u:68 v:85 w:42 x:52 y:0 z:5 
+BALANCES a:43 b:40 c:74 d:131 e:43 f:12 g:17 h:68 i:12 j:192 k:7 l:3 m:1 n:54 o:28 p:11 q:93 r:30 s:11 t:21 u:68 v:85 w:42 x:52 y:0 z:5 
+BALANCES a:43 b:40 c:74 d:131 e:43 f:13 g:17 h:68 i:12 j:192 k:7 l:3 m:1 n:54 o:28 p:11 q:93 r:30 s:11 t:21 u:68 v:85 w:42 x:52 y:0 z:4 
+BALANCES a:111 b:40 c:74 d:63 e:43 f:13 g:17 h:68 i:12 j:192 k:7 l:3 m:1 n:54 o:28 p:11 q:93 r:30 s:11 t:21 u:68 v:85 w:42 x:52 y:0 z:4 
+BALANCES a:111 b:40 c:74 d:63 e:43 f:13 g:16 h:68 i:12 j:192 k:7 l:3 m:2 n:54 o:28 p:11 q:93 r:30 s:11 t:21 u:68 v:85 w:42 x:52 y:0 z:4 
+BALANCES a:111 b:40 c:74 d:63 e:43 f:13 g:16 h:68 i:12 j:192 k:7 l:0 m:2 n:54 o:28 p:11 q:93 r:30 s:11 t:21 u:68 v:85 w:42 x:52 y:3 z:4 
+BALANCES a:111 b:40 c:74 d:63 e:43 f:13 g:16 h:68 i:12 j:192 k:7 l:0 m:2 n:56 o:28 p:11 q:93 r:30 s:11 t:19 u:68 v:85 w:42 x:52 y:3 z:4 
+BALANCES a:111 b:40 c:74 d:63 e:43 f:13 g:16 h:68 i:12 j:192 k:7 l:0 m:2 n:56 o:28 p:11 q:93 r:100 s:11 t:19 u:68 v:85 w:42 x:52 y:3 z:4 
+BALANCES a:111 b:40 c:74 d:63 e:43 f:13 g:16 h:68 i:26 j:192 k:7 l:0 m:2 n:56 o:28 p:11 q:93 r:100 s:11 t:19 u:54 v:85 w:42 x:52 y:3 z:4 
+BALANCES a:147 b:40 c:74 d:63 e:43 f:13 g:16 h:68 i:26 j:156 k:7 l:0 m:2 n:56 o:28 p:11 q:93 r:100 s:11 t:19 u:54 v:85 w:42 x:52 y:3 z:4 
+BALANCES a:147 b:26 c:74 d:63 e:43 f:13 g:16 h:68 i:26 j:156 k:7 l:0 m:2 n:56 o:28 p:11 q:93 r:100 s:11 t:19 u:54 v:85 w:56 x:52 y:3 z:4 
+BALANCES a:148 b:26 c:74 d:63 e:43 f:13 g:16 h:68 i:25 j:156 k:7 l:0 m:2 n:56 o:28 p:11 q:93 r:100 s:11 t:19 u:54 v:85 w:56 x:52 y:3 z:4 
+BALANCES a:148 b:27 c:74 d:63 e:43 f:13 g:16 h:68 i:25 j:156 k:7 l:0 m:1 n:56 o:28 p:11 q:93 r:100 s:11 t:19 u:54 v:85 w:56 x:52 y:3 z:4 
+BALANCES a:147 b:27 c:74 d:63 e:43 f:13 g:17 h:68 i:25 j:156 k:7 l:0 m:1 n:56 o:28 p:11 q:93 r:100 s:11 t:19 u:54 v:85 w:56 x:52 y:3 z:4 
+BALANCES a:147 b:26 c:74 d:63 e:43 f:13 g:17 h:68 i:25 j:156 k:7 l:0 m:1 n:56 o:28 p:12 q:93 r:100 s:11 t:19 u:54 v:85 w:56 x:52 y:3 z:4 
+BALANCES a:147 b:26 c:74 d:63 e:43 f:13 g:17 h:123 i:25 j:156 k:7 l:0 m:1 n:56 o:28 p:12 q:93 r:100 s:11 t:19 u:54 v:85 w:56 x:52 y:3 z:4 
+BALANCES a:147 b:26 c:74 d:63 e:43 f:13 g:17 h:123 i:25 j:156 k:7 l:0 m:1 n:56 o:32 p:12 q:93 r:100 s:11 t:19 u:54 v:85 w:52 x:52 y:3 z:4 
+BALANCES a:147 b:26 c:74 d:63 e:43 f:13 g:17 h:123 i:25 j:156 k:7 l:0 m:1 n:56 o:32 p:12 q:80 r:100 s:11 t:32 u:54 v:85 w:52 x:52 y:3 z:4 
+BALANCES a:147 b:26 c:74 d:63 e:43 f:13 g:17 h:123 i:25 j:156 k:7 l:0 m:16 n:56 o:32 p:12 q:80 r:85 s:11 t:32 u:54 v:85 w:52 x:52 y:3 z:4 
+BALANCES a:147 b:26 c:74 d:63 e:43 f:13 g:17 h:123 i:25 j:156 k:7 l:0 m:2 n:56 o:32 p:12 q:80 r:85 s:11 t:32 u:54 v:99 w:52 x:52 y:3 z:4 
+BALANCES a:147 b:26 c:74 d:90 e:43 f:13 g:17 h:123 i:25 j:156 k:7 l:0 m:2 n:56 o:32 p:12 q:80 r:85 s:11 t:32 u:54 v:72 w:52 x:52 y:3 z:4 
+BALANCES a:147 b:26 c:74 d:90 e:43 f:13 g:17 h:123 i:25 j:74 k:7 l:0 m:2 n:56 o:32 p:12 q:80 r:85 s:11 t:32 u:54 v:72 w:52 x:52 y:85 z:4 
+BALANCES a:147 b:26 c:74 d:92 e:43 f:11 g:17 h:123 i:25 j:74 k:7 l:0 m:2 n:56 o:32 p:12 q:80 r:85 s:11 t:32 u:54 v:72 w:52 x:52 y:85 z:4 
+BALANCES a:147 b:26 c:74 d:92 e:43 f:11 g:17 h:123 i:25 j:74 k:7 l:73 m:2 n:56 o:32 p:12 q:80 r:85 s:11 t:32 u:54 v:72 w:52 x:52 y:85 z:4 
+BALANCES a:147 b:26 c:74 d:92 e:43 f:11 g:17 h:123 i:25 j:74 k:7 l:73 m:2 n:56 o:32 p:12 q:69 r:85 s:11 t:32 u:65 v:72 w:52 x:52 y:85 z:4 
+BALANCES a:147 b:26 c:74 d:92 e:43 f:11 g:17 h:171 i:25 j:74 k:7 l:73 m:2 n:56 o:32 p:12 q:69 r:85 s:11 t:32 u:65 v:72 w:52 x:52 y:85 z:4 
+BALANCES a:147 b:26 c:74 d:92 e:43 f:11 g:17 h:171 i:25 j:74 k:81 l:73 m:2 n:56 o:32 p:12 q:69 r:85 s:11 t:32 u:65 v:72 w:52 x:52 y:85 z:4 
+BALANCES a:147 b:26 c:74 d:92 e:43 f:11 g:17 h:171 i:25 j:74 k:81 l:50 m:2 n:56 o:32 p:12 q:69 r:85 s:11 t:32 u:65 v:72 w:52 x:52 y:108 z:4 
+BALANCES a:147 b:26 c:74 d:92 e:48 f:11 g:17 h:171 i:25 j:74 k:81 l:50 m:2 n:56 o:32 p:7 q:69 r:85 s:11 t:32 u:65 v:72 w:52 x:52 y:108 z:4 
+BALANCES a:147 b:26 c:74 d:92 e:48 f:11 g:17 h:171 i:25 j:74 k:113 l:18 m:2 n:56 o:32 p:7 q:69 r:85 s:11 t:32 u:65 v:72 w:52 x:52 y:108 z:4 
+BALANCES a:147 b:26 c:74 d:92 e:48 f:38 g:17 h:171 i:25 j:74 k:86 l:18 m:2 n:56 o:32 p:7 q:69 r:85 s:11 t:32 u:65 v:72 w:52 x:52 y:108 z:4 
+BALANCES a:147 b:34 c:74 d:92 e:40 f:38 g:17 h:171 i:25 j:74 k:86 l:18 m:2 n:56 o:32 p:7 q:69 r:85 s:11 t:32 u:65 v:72 w:52 x:52 y:108 z:4 
+BALANCES a:147 b:34 c:74 d:92 e:40 f:38 g:17 h:171 i:25 j:74 k:111 l:18 m:2 n:56 o:32 p:7 q:69 r:85 s:11 t:32 u:65 v:47 w:52 x:52 y:108 z:4 
+BALANCES a:147 b:34 c:74 d:92 e:40 f:38 g:17 h:171 i:25 j:74 k:111 l:18 m:2 n:56 o:32 p:7 q:31 r:85 s:11 t:32 u:103 v:47 w:52 x:52 y:108 z:4 
+BALANCES a:147 b:35 c:74 d:92 e:40 f:38 g:17 h:171 i:25 j:74 k:111 l:18 m:2 n:56 o:32 p:7 q:31 r:85 s:11 t:32 u:103 v:47 w:52 x:52 y:108 z:3 
+BALANCES a:145 b:35 c:74 d:92 e:40 f:38 g:17 h:171 i:25 j:74 k:111 l:18 m:2 n:56 o:32 p:9 q:31 r:85 s:11 t:32 u:103 v:47 w:52 x:52 y:108 z:3 
+BALANCES a:145 b:35 c:74 d:92 e:40 f:38 g:17 h:171 i:25 j:74 k:111 l:10 m:2 n:56 o:32 p:17 q:31 r:85 s:11 t:32 u:103 v:47 w:52 x:52 y:108 z:3 
+BALANCES a:145 b:35 c:74 d:92 e:40 f:38 g:17 h:171 i:25 j:74 k:126 l:10 m:2 n:41 o:32 p:17 q:31 r:85 s:11 t:32 u:103 v:47 w:52 x:52 y:108 z:3 
+BALANCES a:145 b:35 c:74 d:92 e:40 f:38 g:17 h:171 i:25 j:74 k:126 l:10 m:2 n:41 o:32 p:17 q:31 r:85 s:11 t:32 u:103 v:47 w:48 x:52 y:108 z:7 
+BALANCES a:144 b:35 c:74 d:93 e:40 f:38 g:17 h:171 i:25 j:74 k:126 l:10 m:2 n:41 o:32 p:17 q:31 r:85 s:11 t:32 u:103 v:47 w:48 x:52 y:108 z:7 
+BALANCES a:144 b:35 c:74 d:93 e:48 f:38 g:17 h:171 i:25 j:74 k:126 l:10 m:2 n:41 o:32 p:17 q:31 r:85 s:11 t:32 u:103 v:47 w:40 x:52 y:108 z:7 
+BALANCES a:144 b:35 c:74 d:93 e:48 f:38 g:17 h:171 i:25 j:74 k:126 l:10 m:2 n:40 o:32 p:17 q:32 r:85 s:11 t:32 u:103 v:47 w:40 x:52 y:108 z:7 
+BALANCES a:144 b:35 c:74 d:93 e:37 f:38 g:17 h:171 i:36 j:74 k:126 l:10 m:2 n:40 o:32 p:17 q:32 r:85 s:11 t:32 u:103 v:47 w:40 x:52 y:108 z:7 
+BALANCES a:144 b:35 c:74 d:93 e:37 f:38 g:17 h:171 i:36 j:74 k:126 l:34 m:2 n:40 o:32 p:17 q:32 r:85 s:11 t:32 u:103 v:47 w:40 x:28 y:108 z:7 
+BALANCES a:144 b:35 c:74 d:93 e:34 f:38 g:17 h:171 i:36 j:74 k:126 l:34 m:2 n:40 o:32 p:17 q:32 r:85 s:11 t:32 u:103 v:47 w:40 x:28 y:108 z:10 
+BALANCES a:144 b:35 c:74 d:93 e:34 f:38 g:17 h:171 i:36 j:74 k:126 l:34 m:2 n:40 o:32 p:17 q:32 r:85 s:11 t:32 u:103 v:47 w:29 x:39 y:108 z:10 
+BALANCES a:144 b:35 c:74 d:93 e:34 f:38 g:17 h:171 i:36 j:74 k:126 l:34 m:2 n:40 o:32 p:17 q:32 r:84 s:11 t:32 u:103 v:47 w:30 x:39 y:108 z:10 
+BALANCES a:144 b:35 c:74 d:93 e:34 f:38 g:17 h:171 i:36 j:74 k:126 l:29 m:2 n:40 o:32 p:17 q:32 r:84 s:11 t:32 u:103 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:141 b:35 c:74 d:93 e:34 f:38 g:17 h:171 i:36 j:74 k:126 l:29 m:2 n:40 o:32 p:17 q:32 r:84 s:14 t:32 u:103 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:141 b:35 c:74 d:93 e:32 f:38 g:17 h:171 i:36 j:74 k:126 l:29 m:2 n:40 o:32 p:19 q:32 r:84 s:14 t:32 u:103 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:141 b:35 c:81 d:93 e:32 f:38 g:17 h:171 i:36 j:74 k:126 l:29 m:2 n:40 o:32 p:19 q:32 r:84 s:14 t:25 u:103 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:141 b:35 c:81 d:93 e:32 f:38 g:17 h:171 i:36 j:70 k:126 l:29 m:2 n:40 o:32 p:19 q:32 r:88 s:14 t:25 u:103 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:141 b:35 c:81 d:60 e:32 f:38 g:50 h:171 i:36 j:70 k:126 l:29 m:2 n:40 o:32 p:19 q:32 r:88 s:14 t:25 u:103 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:141 b:35 c:81 d:60 e:32 f:38 g:50 h:153 i:36 j:70 k:144 l:29 m:2 n:40 o:32 p:19 q:32 r:88 s:14 t:25 u:103 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:141 b:35 c:81 d:60 e:32 f:38 g:50 h:153 i:36 j:70 k:137 l:29 m:2 n:40 o:32 p:19 q:32 r:88 s:14 t:25 u:110 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:141 b:31 c:81 d:60 e:32 f:38 g:50 h:153 i:36 j:70 k:137 l:29 m:2 n:44 o:32 p:19 q:32 r:88 s:14 t:25 u:110 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:141 b:31 c:81 d:60 e:32 f:38 g:102 h:153 i:36 j:70 k:137 l:29 m:2 n:44 o:32 p:19 q:32 r:88 s:14 t:25 u:110 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:143 b:31 c:81 d:60 e:32 f:38 g:102 h:153 i:36 j:70 k:137 l:29 m:2 n:44 o:32 p:19 q:32 r:88 s:12 t:25 u:110 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:143 b:31 c:81 d:60 e:22 f:38 g:102 h:153 i:36 j:70 k:137 l:29 m:2 n:54 o:32 p:19 q:32 r:88 s:12 t:25 u:110 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:143 b:31 c:81 d:60 e:22 f:38 g:100 h:153 i:36 j:70 k:137 l:29 m:2 n:54 o:32 p:21 q:32 r:88 s:12 t:25 u:110 v:47 w:30 x:44 y:108 z:10 
+BALANCES a:143 b:31 c:81 d:71 e:22 f:38 g:100 h:153 i:36 j:70 k:137 l:29 m:2 n:54 o:32 p:21 q:32 r:88 s:12 t:25 u:110 v:47 w:19 x:44 y:108 z:10 
+BALANCES a:242 b:31 c:81 d:71 e:22 f:38 g:100 h:153 i:36 j:70 k:137 l:29 m:2 n:54 o:32 p:21 q:32 r:88 s:12 t:25 u:110 v:47 w:19 x:44 y:108 z:10 
+BALANCES a:242 b:31 c:81 d:71 e:22 f:38 g:100 h:153 i:36 j:169 k:137 l:29 m:2 n:54 o:32 p:21 q:32 r:88 s:12 t:25 u:110 v:47 w:19 x:44 y:108 z:10 
+BALANCES a:242 b:31 c:81 d:71 e:22 f:38 g:53 h:153 i:36 j:169 k:137 l:29 m:2 n:54 o:32 p:21 q:32 r:88 s:12 t:25 u:110 v:94 w:19 x:44 y:108 z:10 
+BALANCES a:242 b:31 c:81 d:71 e:22 f:38 g:53 h:153 i:36 j:169 k:137 l:29 m:2 n:54 o:32 p:21 q:32 r:88 s:12 t:25 u:110 v:94 w:19 x:44 y:122 z:10 

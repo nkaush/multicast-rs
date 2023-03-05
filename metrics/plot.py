@@ -25,5 +25,8 @@ cdf = DataFrame({'latencies': latencies})['latencies'].quantile(indices)
 indices *= 100
 
 plt.plot(cdf, indices, linewidth=2, label='latency', color='blue')
+plt.title('Cumulative Distribution of Transaction Processing Time')
+plt.xlabel('Processing Time')
+plt.ylabel('Percentile')
 plt.legend(loc='best')
 plt.savefig(out_file)
