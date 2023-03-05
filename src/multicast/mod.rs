@@ -175,12 +175,18 @@ impl<M> TotalOrderedMulticast<M> {
         if log_enabled!(Level::Trace) { self.print_pq(); }
     }
 
-    fn recheck_pq_delivery_status(&mut self) {
-        for qm in self.queued_messages.values_mut() {
-            if qm.votes.is_superset(self.reliable_multicast.members()) {
+    fn recheck_pq_delivery_status(&mut self) where M: Clone + fmt::Debug {
+        let to_confirm = self.queued_messages.iter_mut()
+            .filter(|(_, qm)| qm.votes.is_superset(self.reliable_multicast.members()))
+            .map(|(mid, qm)| {
                 qm.mark_deliverable();
-            }
-        }
+                mid.clone()
+            })
+            .collect::<Vec<_>>();
+
+        to_confirm
+            .into_iter()
+            .for_each(|mid| self.confirmed_message_priority(mid));
     }
 
     fn try_empty_pq(&mut self) where M: fmt::Debug {
@@ -299,8 +305,6 @@ impl<M> TotalOrderedMulticast<M> {
                         self.reliable_multicast.remove_member(&msg.member_id);
                         self.recheck_pq_delivery_status();
                         self.try_empty_pq();
-
-                        // self.spawn_pq_flush_signal(msg.member_id);
 
                         let pq_flush_snd_clone = self.pq_flush_snd.clone();
                         tokio::spawn(async move {
