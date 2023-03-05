@@ -21,7 +21,7 @@ To start each node, type `./mp1_node [node name] [name of config file]`
 
 
 ## Evaluation Scenarios
-When this is run on each node, (the number of nodes specified in the config file passed in as a parameter), it will fail and terminate if any node crashes, or successfully complete if no nodes fail. Transactions and deposits will be evaluated and then processed, and node balances will be updated and printed after every event. We created 
+This is run on each node - the number of nodes specified in the config file passed in as a parameter. It will fail and terminate if any node crashes, or successfully complete if no nodes fail. Transactions and deposits will be evaluated and then processed, and node balances will be updated and printed after every event. We created 
 
 ### 3 nodes with failure
 ![](metrics/3-nodes-fail/cdf.png)
