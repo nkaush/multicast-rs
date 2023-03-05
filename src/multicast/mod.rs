@@ -155,17 +155,6 @@ impl<M> TotalOrderedMulticast<M> {
         trace!("{}", pq_str);
     }
 
-    fn spawn_pq_flush_signal(&mut self, member_id: NodeId) {
-        let snd_clone = self.pq_flush_snd.clone();
-
-        tokio::spawn(async move {
-            trace!("Waiting for {}s before flushing PQ of all messages from node {}...", MAX_MESSAGE_LATENCY_SECS, member_id);
-            time::sleep(time::Duration::from_secs(MAX_MESSAGE_LATENCY_SECS)).await;
-            trace!("Waiting for messages from node {} to trickle in finished...", member_id);
-            snd_clone.send(member_id).unwrap();
-        });
-    }
-
     fn flush_pq_unconfirmed_messages(&mut self, member_id: NodeId) {
         if log_enabled!(Level::Trace) { 
             trace!("Flushing PQ of all messages from node {}", member_id);
@@ -311,11 +300,20 @@ impl<M> TotalOrderedMulticast<M> {
                         self.recheck_pq_delivery_status();
                         self.try_empty_pq();
 
-                        self.spawn_pq_flush_signal(msg.member_id);
+                        let snd_clone = self.pq_flush_snd.clone();
+                        tokio::spawn(async move {
+                            trace!("Waiting for {}s before flushing PQ of all messages from node {}...", MAX_MESSAGE_LATENCY_SECS, msg.member_id);
+                            time::sleep(time::Duration::from_secs(MAX_MESSAGE_LATENCY_SECS)).await;
+                            trace!("Waiting for messages from node {} to trickle in finished...", msg.member_id);
+                            snd_clone.send(msg.member_id).unwrap();
+                        });
                     },
                     MemberStateMessageType::DuplicateMessage => ()
                 },
-                Some(member_id) = self.pq_flush_rcv.recv() => self.flush_pq_unconfirmed_messages(member_id)
+                Some(member_id) = self.pq_flush_rcv.recv() => {
+                    self.flush_pq_unconfirmed_messages(member_id);
+                    self.try_empty_pq();
+                }
             }
         }
     }
