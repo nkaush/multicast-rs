@@ -20,10 +20,12 @@ use std::{collections::{HashSet, HashMap}, cmp::Reverse, fmt};
 use serde::{Serialize, de::DeserializeOwned};
 use log::{trace, error, log_enabled, Level};
 use priority_queue::PriorityQueue;
-use tokio::select;
+use tokio::{select, time};
 
 type MulticastGroup<M> = HashMap<NodeId, MulticastMemberHandle<M>>;
 type IncomingChannel<M> = UnboundedReceiver<MemberStateMessage<M>>;
+
+static MAX_MESSAGE_LATENCY_SECS: u64 = 4;
 
 struct QueuedMessage<M> {
     message: M,
@@ -70,6 +72,14 @@ pub struct TotalOrderedMulticast<M> {
 
     /// Send handle to pass messages to the bank logic thread
     to_bank: UnboundedSender<M>,
+
+    /// Receives message to flush the priority queue of all messages from a dead 
+    /// sender after waiting for a particular timeout.
+    pq_flush_rcv: UnboundedReceiver<NodeId>,
+
+    /// Send handle for messages to flush the priority queue of all messages 
+    /// from a dead sender after waiting for a particular timeout.
+    pq_flush_snd: UnboundedSender<NodeId>,
     
     /// Hold on to the send handle so we always know we can receive messages
     _client_snd_handle: UnboundedSender<MemberStateMessage<M>>,
@@ -78,7 +88,7 @@ pub struct TotalOrderedMulticast<M> {
 impl<M> TotalOrderedMulticast<M> {
     pub async fn new(node_id: NodeId, config: &Config, bank_snd: UnboundedSender<M>) ->(Self, UnboundedSender<M>) where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
         let (to_multicast, from_cli) = unbounded_channel();
-
+        let (pq_flush_snd, pq_flush_rcv) = unbounded_channel();
         let pool = ConnectionPool::new(node_id)
             .connect(config)
             .await;
@@ -94,6 +104,8 @@ impl<M> TotalOrderedMulticast<M> {
             next_priority_proposal: 0,
             queued_messages: HashMap::new(),
             to_bank: bank_snd,
+            pq_flush_rcv,
+            pq_flush_snd,
             _client_snd_handle: pool.client_snd_handle
         };
 
@@ -141,6 +153,37 @@ impl<M> TotalOrderedMulticast<M> {
             ).as_str();
         }
         trace!("{}", pq_str);
+    }
+
+    fn spawn_pq_flush_signal(&mut self, member_id: NodeId) {
+        let snd_clone = self.pq_flush_snd.clone();
+
+        tokio::spawn(async move {
+            trace!("Waiting for {}s before flushing PQ of all messages from node {}...", MAX_MESSAGE_LATENCY_SECS, member_id);
+            time::sleep(time::Duration::from_secs(MAX_MESSAGE_LATENCY_SECS)).await;
+            trace!("Waiting for messages from node {} to trickle in finished...", member_id);
+            snd_clone.send(member_id).unwrap();
+        });
+    }
+
+    fn flush_pq_unconfirmed_messages(&mut self, member_id: NodeId) {
+        if log_enabled!(Level::Trace) { 
+            trace!("Flushing PQ of all messages from node {}", member_id);
+            self.print_pq(); 
+        }
+        let to_remove = self.queued_messages
+            .iter()
+            .filter(|(mid, qm)| {
+                mid.original_sender == member_id && !qm.is_deliverable()
+            })
+            .map(|(mid, _)| mid.clone())
+            .collect::<Vec<_>>();
+
+        for mid in to_remove.into_iter() {
+            self.queued_messages.remove(&mid);
+            self.pq.remove(&mid);
+        }
+        if log_enabled!(Level::Trace) { self.print_pq(); }
     }
 
     fn recheck_pq_delivery_status(&mut self) {
@@ -267,9 +310,12 @@ impl<M> TotalOrderedMulticast<M> {
                         self.reliable_multicast.remove_member(&msg.member_id);
                         self.recheck_pq_delivery_status();
                         self.try_empty_pq();
+
+                        self.spawn_pq_flush_signal(msg.member_id);
                     },
                     MemberStateMessageType::DuplicateMessage => ()
-                }
+                },
+                Some(member_id) = self.pq_flush_rcv.recv() => self.flush_pq_unconfirmed_messages(member_id)
             }
         }
     }
