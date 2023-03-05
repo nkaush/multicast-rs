@@ -140,7 +140,7 @@ impl<M> TotalOrderedMulticast<M> {
 
     fn print_pq(&self) {
         let mut pq_str = String::new();
-        for (id, pri) in self.pq.clone().into_sorted_iter() {
+        for (id, pri) in self.pq.clone().into_sorted_iter().take(20) {
             let qm = self.queued_messages.get(&id).unwrap();
             pq_str += format!(
                 "(NODE={} ID={} PRI={} BY={} V={:?} D={}) ", 
@@ -152,7 +152,7 @@ impl<M> TotalOrderedMulticast<M> {
                 qm.is_deliverable()
             ).as_str();
         }
-        trace!("{}", pq_str);
+        trace!("length={} --> {}", self.pq.len(), pq_str);
     }
 
     fn flush_pq_unconfirmed_messages(&mut self, member_id: NodeId) {
