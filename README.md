@@ -2,12 +2,12 @@
 
 ## Team Details
 * Cluster 45
-* Git Repo:
-* Git Revision:
+* Git Repo: https://gitlab.engr.illinois.edu/neilk3/cs425-mp1-neilk3-ngogate2/
+* Git Revision: ac40a056816a36fe8ab032703509a39e167bf9ea
 
 ## Group Members
-* Neil Kaushikkar (neilk3)
 * Neha Gogate (ngogate2)
+* Neil Kaushikkar (neilk3)
 
 ## Build Instructions:
 
@@ -15,9 +15,8 @@
 2. If you are installing Rust for the first time, you will also need to run the following command to add `cargo` to your path for the current shell/session: `source "$HOME/.cargo/env"`
 3. Run `make` in the project root directory. This will build `./mp1_node`
 
-
 ## Running Instructions:
-To start each node, type `./mp1_node [node name] [name of config file]` 
+To start each node, type `./mp1_node [node name] [path to config file]` 
 
 ## Design
 
@@ -34,7 +33,6 @@ This means that we only need to keep track of the sequence number of the last me
 Our service also monitors for any node failures. Upon a node's failure, the TO-multicast service initiates a 4 second timeout (based on the assumption that messages take at most 4 seconds to travel one way between nodes). During these 4 seconds, the service processes any messages that may be forwarded on behalf of the node that died, if any. Once the timeout is up, the service will remove all messages originating from the dead node from its priority queue of messages to deliver. It also stops waiting for any proposed priorities from the dead node and delivers any messages that may be stuck since they are waiting on a proposed priority from the dead node. The node that just died will no longer be delivering messages, so all other nodes no longer need to wait for a proposed priority to ensure total ordering on the dead node. The system only needs to wait for priorities from alive nodes, so we can flush the system of all pending messages from the dead node after our timeout since any straggling messages from the dead node will be delivered before the timeout expires.
 
 ## Evaluation Scenarios
-This is run on each node - the number of nodes specified in the config file passed in as a parameter. It will fail and terminate if any node crashes, or successfully complete if no nodes fail. Transactions and deposits will be evaluated and then processed, and node balances will be updated and printed after every event. We created 
 
 ### 3 nodes with failure
 ![](metrics/3-nodes-fail/cdf.png)
