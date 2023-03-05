@@ -60,24 +60,22 @@ impl Bank {
             self.log_latency(&sample).await;
             match sample.tr {
                 TransactionType::Deposit(person, amt) => {
-                    trace!("[BANK] DEPOSIT {} {}", person, amt);
+                    trace!("DEPOSIT {} {}", person, amt);
                     self.accounts.entry(person).and_modify(|curr| *curr += amt).or_insert(amt); 
-                    self.print_balances();
-                }
-    
+                },
                 TransactionType::Transfer(person1, person2, amt) => {
                     match self.accounts.get(&person1) {
                         Some(balance1) => if balance1 >= &amt { 
-                            trace!("[BANK] TRANSFER {} -> {} {}", person1, person2, amt);
+                            trace!("TRANSFER {} -> {} {}", person1, person2, amt);
                             self.accounts.entry(person1).and_modify(|curr| *curr -= amt);
                             self.accounts.entry(person2).and_modify(|curr| *curr += amt).or_insert(amt);
-                            
-                            self.print_balances();
                         },
                         None => ()
                     }
                 }
             }
+
+            self.print_balances();
         }
     }
 }
