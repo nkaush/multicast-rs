@@ -1,6 +1,6 @@
 use super::{MulticastGroup, IncomingChannel, NetworkMessage, MemberStateMessage, NodeId};
 use std::{fmt, collections::HashSet};
-use log::trace;
+use log::{error, trace};
 
 pub(super) struct BasicMulticast<M> {
     group: MulticastGroup<M>,
@@ -17,7 +17,9 @@ impl<M> BasicMulticast<M> {
     pub fn send_single(&self, msg: NetworkMessage<M>, recipient: &NodeId) where M: fmt::Debug {
         if let Some(handle) = self.group.get(recipient) {
             trace!("sending message to {}: {:?}", handle.member_id, msg);
-            handle.pass_message(msg).unwrap();
+            if let Err(e) = handle.pass_message(msg) {
+                error!("Failed to pass message to node {} handler: {:?}", handle.member_id, e);
+            }
         }
     }
 
@@ -26,12 +28,16 @@ impl<M> BasicMulticast<M> {
             Some(except) => for handle in self.group.values() {
                 if !except.contains(&handle.member_id) {
                     trace!("sending message to {}: {:?}", handle.member_id, msg);
-                    handle.pass_message(msg.clone()).unwrap();
+                    if let Err(e) = handle.pass_message(msg.clone()) {
+                        error!("Failed to pass message to node {} handler: {:?}", handle.member_id, e);
+                    }
                 }
             },
             None => for handle in self.group.values() {
                 trace!("sending message to {}: {:?}", handle.member_id, msg);
-                handle.pass_message(msg.clone()).unwrap();
+                if let Err(e) = handle.pass_message(msg.clone()) {
+                    error!("Failed to pass message to node {} handler: {:?}", handle.member_id, e);
+                }
             }
         }
     }
