@@ -13,7 +13,7 @@ use serde::{Serialize, de::DeserializeOwned};
 use log::{trace, error};
 
 pub(super) struct ConnectionPool<M> {
-    pub group: MulticastGroup<M>,
+    pub group: MulticastGroup,
     pub node_id: NodeId,
     pub from_members: UnboundedReceiver<MemberStateMessage<M>>,
     pub client_snd_handle: UnboundedSender<MemberStateMessage<M>>
@@ -72,7 +72,7 @@ impl<M> ConnectionPool<M> {
     }
 
     async fn priv_connect(mut self, config: &Config) -> Self where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
-        let node_config = config.get(&self.node_id).unwrap();
+        let node_config = config.get(self.node_id).unwrap();
 
         let bind_addr: SocketAddr = ([0, 0, 0, 0], node_config.port).into();
         let tcp_listener = match TcpListener::bind(bind_addr).await {
@@ -85,12 +85,12 @@ impl<M> ConnectionPool<M> {
 
         let (stream_snd, mut stream_rcv) = unbounded_channel();
 
-        for node in node_config.connection_list.iter() {
-            let connect_config = config.get(&node).unwrap();
+        for node in Config::get_connection_list(self.node_id) {
+            let connect_config = config.get(node).unwrap();
             let snd_clone = stream_snd.clone();
             tokio::spawn(Self::connect_to_node(
                 self.node_id, 
-                *node, 
+                node, 
                 connect_config.hostname.clone(), 
                 connect_config.port, 
                 snd_clone

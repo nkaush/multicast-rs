@@ -1,4 +1,3 @@
-pub mod multicast;
 pub mod bank;
 pub mod cli;
 

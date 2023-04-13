@@ -1,5 +1,5 @@
-use mp1_node::{Bank, Cli, TotalOrderedMulticast, parse_config};
-use mp1_node::multicast::{Config, NodeId};
+use fault_tolerant_atm::{Bank, Cli, TotalOrderedMulticast, parse_config};
+use multicast::{Config, NodeId};
 use tokio::select;
 
 #[tokio::main]

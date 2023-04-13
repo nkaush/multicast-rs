@@ -4,7 +4,7 @@ use tokio::{
 };
 use serde::{Serialize, Deserialize};
 use std::collections::BTreeMap;
-use crate::multicast::NodeId;
+use multicast::NodeId;
 use std::io::Cursor;
 use log::trace;
 

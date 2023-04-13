@@ -1,3 +1,4 @@
+use super::config::NodeId;
 use tokio::{
     sync::mpsc::{UnboundedSender, UnboundedReceiver, error::SendError}, 
     task::JoinHandle, net::TcpStream, select
@@ -5,39 +6,38 @@ use tokio::{
 use serde::{de::DeserializeOwned, Serialize};
 use tokio_util::codec::LengthDelimitedCodec;
 use futures::{stream::StreamExt, SinkExt};
-use super::{NetworkMessage, NodeId};
 use log::{trace, error};
 use std::fmt;
 
 /// Represents any message types a member handler thread could send the multicast engine
 #[derive(Debug)]
-pub(super) enum MemberStateMessageType<M> {
-    Message(NetworkMessage<M>),
+pub enum MemberStateMessageType<M> {
+    Message(M),
     DuplicateMessage,
     NetworkError
 }
 
 /// Represents any messages a member handler thread could send the multicast engine.
 #[derive(Debug)]
-pub(super) struct MemberStateMessage<M> {
+pub struct MemberStateMessage<M> {
     pub msg: MemberStateMessageType<M>,
     pub member_id: NodeId
 }
 
 /// The handle that the multicast engine has for each member handler thread.
-pub(super) struct MulticastMemberHandle<M> {
+pub(super) struct MulticastMemberHandle {
     pub member_id: NodeId,
-    pub to_client: UnboundedSender<NetworkMessage<M>>,
+    pub to_client: UnboundedSender<Vec<u8>>,
     pub handle: JoinHandle<()>
 }
 
-impl<M> MulticastMemberHandle<M> {
-    pub fn pass_message(&self, msg: NetworkMessage<M>) -> Result<(), SendError<NetworkMessage<M>>> {
+impl MulticastMemberHandle {
+    pub fn pass_message(&self, msg: Vec<u8>) -> Result<(), SendError<Vec<u8>>> {
         self.to_client.send(msg)
     }
 }
 
-impl<M> Drop for MulticastMemberHandle<M> {
+impl Drop for MulticastMemberHandle {
     fn drop(&mut self) {
         trace!("Aborting client thread for {}", self.member_id);
         self.handle.abort()
@@ -47,7 +47,7 @@ impl<M> Drop for MulticastMemberHandle<M> {
 pub(super) struct MulticastMemberData<M> {
     pub member_id: NodeId,
     pub to_engine: UnboundedSender<MemberStateMessage<M>>,
-    pub from_engine: UnboundedReceiver<NetworkMessage<M>>
+    pub from_engine: UnboundedReceiver<Vec<u8>>
 }
 
 impl<M> MulticastMemberData<M> {

@@ -1,7 +1,8 @@
-use crate::{Transaction, TransactionType, multicast::NodeId};
+use crate::{Transaction, TransactionType};
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio::sync::mpsc::{UnboundedSender};
 use futures::stream::StreamExt;
+use multicast::NodeId;
 
 pub struct Cli {
     cli_send: UnboundedSender<Transaction>,

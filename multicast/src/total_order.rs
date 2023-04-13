@@ -1,19 +1,12 @@
-mod connection_pool;
-mod protocol;
-mod reliable;
-mod config;
-mod member;
-mod basic;
-
-pub use config::{Config, NodeId, parse_config};
-
-use protocol::{
-    NetworkMessage, NetworkMessageType, MessageId, MessagePriority, 
-    PriorityMessageType, PriorityRequestType, PriorityProposalType
+use super::protocol::{
+    PriorityMessageArgs, PriorityRequestArgs, PriorityProposalArgs,
+    TotalOrderNetworkMessage, MessageId, MessagePriority, 
 };
-use member::{MulticastMemberHandle, MemberStateMessage, MemberStateMessageType};
-use connection_pool::ConnectionPool;
-use reliable::ReliableMulticast;
+
+use super::reliable::{ReliableNetworkMessage, ReliableMulticast};
+use super::member::{MemberStateMessage, MemberStateMessageType};
+use super::connection_pool::ConnectionPool;
+use super::config::{Config, NodeId};
 
 use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel};
 use std::{collections::{HashSet, HashMap}, cmp::Reverse, fmt};
@@ -21,9 +14,6 @@ use serde::{Serialize, de::DeserializeOwned};
 use log::{trace, error, log_enabled, Level};
 use priority_queue::PriorityQueue;
 use tokio::{select, time};
-
-type MulticastGroup<M> = HashMap<NodeId, MulticastMemberHandle<M>>;
-type IncomingChannel<M> = UnboundedReceiver<MemberStateMessage<M>>;
 
 static MAX_MESSAGE_LATENCY_SECS: u64 = 4;
 
@@ -65,7 +55,7 @@ pub struct TotalOrderedMulticast<M> {
     next_priority_proposal: usize,
 
     /// A reliable multicast client that delivers messages from members to this node
-    reliable_multicast: ReliableMulticast<M>,
+    reliable_multicast: ReliableMulticast<TotalOrderNetworkMessage<M>>,
 
     /// Receive handle to take input from the CLI loop
     from_cli: UnboundedReceiver<M>,
@@ -82,7 +72,7 @@ pub struct TotalOrderedMulticast<M> {
     pq_flush_snd: UnboundedSender<NodeId>,
     
     /// Hold on to the send handle so we always know we can receive messages
-    _client_snd_handle: UnboundedSender<MemberStateMessage<M>>,
+    _client_snd_handle: UnboundedSender<MemberStateMessage<ReliableNetworkMessage<TotalOrderNetworkMessage<M>>>>,
 }
 
 impl<M> TotalOrderedMulticast<M> {
@@ -175,7 +165,7 @@ impl<M> TotalOrderedMulticast<M> {
         if log_enabled!(Level::Trace) { self.print_pq(); }
     }
 
-    fn recheck_pq_delivery_status(&mut self) where M: Clone + fmt::Debug {
+    fn recheck_pq_delivery_status(&mut self) where M: Serialize + fmt::Debug {
         let to_confirm = self.queued_messages.iter_mut()
             .filter(|(_, qm)| 
                 qm.votes.is_superset(self.reliable_multicast.members())
@@ -209,7 +199,7 @@ impl<M> TotalOrderedMulticast<M> {
     }
 
     /// We got some input from the CLI, now we want to request a priority for it.
-    fn request_priority(&mut self, msg: M) where M: fmt::Debug + Clone {
+    fn request_priority(&mut self, msg: M) where M: fmt::Debug + Serialize + Clone {
         let local_id = self.get_local_id();
         let my_pri = self.get_next_priority();
 
@@ -219,12 +209,12 @@ impl<M> TotalOrderedMulticast<M> {
             QueuedMessage::new(msg.clone())
         );
         
-        let rq_type = PriorityRequestType { local_id, message: msg };
-        self.reliable_multicast.broadcast(NetworkMessageType::PriorityRequest(rq_type));
+        let rq_type = PriorityRequestArgs { local_id, message: msg };
+        self.reliable_multicast.broadcast(TotalOrderNetworkMessage::PriorityRequest(rq_type));
     }
 
     /// We got a request from another process for priority, so propose a priority.
-    fn propose_priority(&mut self, request: PriorityRequestType<M>) where M: fmt::Debug + Clone {
+    fn propose_priority(&mut self, request: PriorityRequestArgs<M>) where M: fmt::Debug + Serialize {
         let requester_local_id = request.local_id;
         let priority = self.get_next_priority();
         let recipient = requester_local_id.original_sender;
@@ -235,30 +225,30 @@ impl<M> TotalOrderedMulticast<M> {
             QueuedMessage::new(request.message)
         );
 
-        let proposed_pri = PriorityProposalType {
+        let proposed_pri = PriorityProposalArgs {
             requester_local_id,
             priority
         };
         
-        let msg_type = NetworkMessageType::PriorityProposal(proposed_pri);
+        let msg_type = TotalOrderNetworkMessage::PriorityProposal(proposed_pri);
         self.reliable_multicast.send_single(msg_type, &recipient);
     }
 
     /// We got all the priorities for our message back, so send out the 
     /// confirmed priority along with the message.
-    fn confirmed_message_priority(&mut self, message_id: MessageId) where M: fmt::Debug + Clone {
+    fn confirmed_message_priority(&mut self, message_id: MessageId) where M: fmt::Debug + Serialize {
         let priority = self.pq
             .get_priority(&message_id)
             .unwrap().0;
         
         self.reliable_multicast.broadcast(
-            NetworkMessageType::PriorityMessage(PriorityMessageType {
+            TotalOrderNetworkMessage::PriorityMessage(PriorityMessageArgs {
                 local_id: message_id,
                 priority
             }));
     }
 
-    pub async fn main_loop(&mut self) where M: Clone + fmt::Debug { 
+    pub async fn main_loop(&mut self) where M: Serialize + fmt::Debug + Clone { 
         loop {
             select! {
                 input = self.from_cli.recv() => match input {
@@ -268,19 +258,19 @@ impl<M> TotalOrderedMulticast<M> {
                         break
                     }
                 },
-                msg = self.reliable_multicast.deliver() => match msg.msg {
-                    MemberStateMessageType::Message(net_msg) => {
-                        trace!("DELIVERED network message from {}: {:?}", msg.member_id, net_msg);
-                        match net_msg.msg_type {
-                            NetworkMessageType::PriorityRequest(request) => self.propose_priority(request),
-                            NetworkMessageType::PriorityProposal(m) => {
+                member_state = self.reliable_multicast.deliver() => match member_state.msg {
+                    MemberStateMessageType::Message(msg) => {
+                        trace!("DELIVERED network message from {}: {:?}", member_state.member_id, msg);
+                        match msg {
+                            TotalOrderNetworkMessage::PriorityRequest(request) => self.propose_priority(request),
+                            TotalOrderNetworkMessage::PriorityProposal(m) => {
                                 let mid = m.requester_local_id;
                                 let qm = self.queued_messages.get_mut(&mid).unwrap();
 
                                 // We are reversing the priority, so push decrease will be inverted 
                                 // and push if the new inner priority is greater than the old priority
                                 self.pq.push_decrease(mid, Reverse(m.priority));
-                                qm.add_voter(msg.member_id);
+                                qm.add_voter(member_state.member_id);
 
                                 if qm.votes.is_superset(self.reliable_multicast.members()) {
                                     qm.mark_deliverable();
@@ -289,7 +279,7 @@ impl<M> TotalOrderedMulticast<M> {
                                     self.try_empty_pq();
                                 }
                             },
-                            NetworkMessageType::PriorityMessage(m) => {
+                            TotalOrderNetworkMessage::PriorityMessage(m) => {
                                 let mid = m.local_id;
                                 self.sync_next_priority(&m.priority);
 
@@ -306,16 +296,16 @@ impl<M> TotalOrderedMulticast<M> {
                     },
                     MemberStateMessageType::NetworkError => {
                         // remove the client from the group if it encounters a network error
-                        self.reliable_multicast.remove_member(&msg.member_id);
+                        self.reliable_multicast.remove_member(&member_state.member_id);
                         self.recheck_pq_delivery_status();
                         self.try_empty_pq();
 
                         let pq_flush_snd_clone = self.pq_flush_snd.clone();
                         tokio::spawn(async move {
-                            trace!("Waiting for {}s before flushing PQ of all messages from node {}...", MAX_MESSAGE_LATENCY_SECS, msg.member_id);
+                            trace!("Waiting for {}s before flushing PQ of all messages from node {}...", MAX_MESSAGE_LATENCY_SECS, member_state.member_id);
                             time::sleep(time::Duration::from_secs(MAX_MESSAGE_LATENCY_SECS)).await;
-                            trace!("Waiting for messages from node {} to trickle in finished...", msg.member_id);
-                            pq_flush_snd_clone.send(msg.member_id).unwrap();
+                            trace!("Waiting for messages from node {} to trickle in finished...", member_state.member_id);
+                            pq_flush_snd_clone.send(member_state.member_id).unwrap();
                         });
                     },
                     MemberStateMessageType::DuplicateMessage => ()

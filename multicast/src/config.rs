@@ -1,5 +1,4 @@
 use std::io::{BufRead, BufReader};
-use std::collections::HashMap;
 use std::fs::File;
 
 pub type NodeId = usize;
@@ -9,24 +8,44 @@ pub struct NodeConfiguration {
     pub node_id: NodeId,
     pub hostname: String,
     pub port: u16,
-    pub connection_list: Vec<NodeId>
 }
 
-impl NodeConfiguration {
-    fn new(node_id: NodeId, hostname: String, port: u16, connection_list: Vec<NodeId>) -> Self {
+pub struct Config {
+    configurations: Vec<NodeConfiguration>,
+    next_id: usize
+}
+
+impl Config {
+    fn new() -> Self {
         Self {
-            node_id,
-            hostname,
-            port,
-            connection_list
+            configurations: Vec::new(),
+            next_id: 0
         }
+    }
+
+    fn add_node(&mut self, hostname: String, port: u16) -> usize {
+        let node_id = self.next_id;
+        self.configurations.push(NodeConfiguration { node_id, hostname, port });
+        self.next_id += 1;
+
+        node_id
+    }
+
+    pub fn get(&self, node_id: usize) -> Option<&NodeConfiguration> {
+        self.configurations.get(node_id)
+    }
+
+    pub fn get_connection_list(node_id: usize) -> impl Iterator<Item=usize> {
+        0..node_id
+    }
+
+    pub fn len(&self) -> usize {
+        self.configurations.len()
     }
 }
 
-pub type Config = HashMap<NodeId, NodeConfiguration>;
-
 pub fn parse_config(path: &str, given_node_name: &str) -> Result<(Config, NodeId), String> {
-    let mut config: HashMap<NodeId, NodeConfiguration> = Config::new();
+    let mut config = Config::new();
     let mut rdr = match File::open(path) {
         Ok(f) => BufReader::new(f),
         Err(e) => return Err(e.to_string())
@@ -42,8 +61,6 @@ pub fn parse_config(path: &str, given_node_name: &str) -> Result<(Config, NodeId
     };
 
     buf.clear();
-    let mut nodes = Vec::new();
-    let mut next_node_id: NodeId = 0;
     let mut this_node_id: Option<NodeId> = None;
     while let Ok(n) = rdr.read_line(&mut buf) {
         if n == 0 { break }
@@ -52,11 +69,10 @@ pub fn parse_config(path: &str, given_node_name: &str) -> Result<(Config, NodeId
         match delimited[0..3] {
             [node_name, hostname, p] => match p.parse() {
                 Ok(port) => {
-                    config.insert(next_node_id, NodeConfiguration::new(next_node_id, hostname.into(), port, nodes.clone()));
-                    nodes.push(next_node_id);
+                    let id = config.add_node(hostname.into(), port);
 
                     if node_name == given_node_name {
-                        this_node_id = Some(next_node_id);
+                        this_node_id = Some(id);
                     }
                 },
                 Err(_) => return Err(format!("Bad config: could not parse port for node with id: {}", n))
@@ -65,7 +81,6 @@ pub fn parse_config(path: &str, given_node_name: &str) -> Result<(Config, NodeId
         };
 
         buf.clear();
-        next_node_id += 1;
     }
 
     if this_node_id.is_none() {

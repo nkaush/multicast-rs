@@ -3,35 +3,26 @@ use core::cmp::Ordering;
 use super::NodeId;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum NetworkMessageType<M> {
-    PriorityRequest(PriorityRequestType<M>),
-    PriorityProposal(PriorityProposalType),
-    PriorityMessage(PriorityMessageType)
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct NetworkMessage<M> {
-    /// If `sequence_num` is some, then this message must be reliably delivered.
-    /// Otherwise, this message is a one-off and may be dropped.
-    pub sequence_num: Option<usize>,
-    pub msg_type: NetworkMessageType<M>,
-    pub forwarded_for: Option<NodeId>
+pub enum TotalOrderNetworkMessage<M> {
+    PriorityRequest(PriorityRequestArgs<M>),
+    PriorityProposal(PriorityProposalArgs),
+    PriorityMessage(PriorityMessageArgs)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PriorityRequestType<M> {
+pub struct PriorityRequestArgs<M> {
     pub local_id: MessageId,
     pub message: M
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PriorityProposalType {
+pub struct PriorityProposalArgs {
     pub requester_local_id: MessageId,
     pub priority: MessagePriority
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PriorityMessageType {
+pub struct PriorityMessageArgs {
     pub local_id: MessageId,
     pub priority: MessagePriority,
 }
