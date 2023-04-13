@@ -1,10 +1,11 @@
 use super::{
-    member::{MemberStateMessage, MemberStateMessageType}, config::NodeId,
-    basic::BasicMulticast, IncomingChannel, MulticastGroup
+    member::MemberStateMessageType, IncomingChannel, Multicast, MulticastError,
+    config::{Config, NodeId}, basic::BasicMulticast, MulticastGroup
 };
-use std::{collections::{HashSet, HashMap}, fmt};
-use log::trace;
+use std::collections::{HashSet, HashMap};
 use serde::{Deserialize, Serialize};
+use async_trait::async_trait;
+use log::trace;
 
 /// A reliable multicast implementation that guarantees delivery to all 
 /// members of the group if a message is delivered to at least one member.
@@ -17,10 +18,17 @@ pub struct ReliableMulticast<M> {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReliableNetworkMessage<M> {
+    /// The message to reliably multicast to all other members of the group.
     pub msg: M,
-    /// If `sequence_num` is some, then this message must be reliably delivered.
-    /// Otherwise, this message is a one-off and may be dropped.
+    /// If `sequence_num` is `Some(_)`, where `_` is the sequence number, then
+    /// this message must be reliably delivered. Otherwise, this message is a 
+    /// one-off message to a single recipient and may be dropped if the sender
+    /// crashes before transmitting all bytes over the network.
     pub sequence_num: Option<usize>,
+    /// If this message was forwarded on behalf of some original sender, then 
+    /// `forwarded_for` is `Some(_)` where `_` is the `NodeId` of the original 
+    /// sender. Otherwise, this message originated from the connection it was 
+    /// received on.
     pub forwarded_for: Option<NodeId>
 }
 
@@ -39,24 +47,6 @@ impl<M> ReliableMulticast<M> {
         Some(id)
     }
 
-    pub fn broadcast(&mut self, msg: M) where M: fmt::Debug + Serialize {
-        let net_msg = ReliableNetworkMessage {
-            msg,
-            forwarded_for: None,
-            sequence_num: self.get_next_seq_num()
-        };
-        self.basic.broadcast(&net_msg, None);
-    }
-
-    pub fn send_single(&mut self, msg: M, recipient: &NodeId) where M: fmt::Debug + Serialize {
-        let net_msg = ReliableNetworkMessage {
-            msg,
-            forwarded_for: None,
-            sequence_num: None
-        };
-        self.basic.send_single(&net_msg, recipient);
-    }
-
     pub fn remove_member(&mut self, member_id: &NodeId) {
         self.basic.remove_member(member_id);
     }
@@ -64,19 +54,38 @@ impl<M> ReliableMulticast<M> {
     pub fn members(&self) -> &HashSet<NodeId> {
         &self.basic.members()
     }
+}
 
-    pub async fn deliver(&mut self) -> MemberStateMessage<M> where M: Serialize + fmt::Debug {
-        let member_state = self.basic.deliver().await;
+#[async_trait]
+impl<M> Multicast<M> for ReliableMulticast<M> where M: Serialize {
+    fn connect(_: usize, _: Config) -> Self { todo!() }
+
+    fn connect_timeout(_: usize, _: Config, _: u64) -> Self { todo!() }
+
+    fn broadcast(&mut self, msg: M) -> Result<(), MulticastError> where M: Serialize { 
+        self.basic.broadcast(ReliableNetworkMessage {
+            msg,
+            forwarded_for: None,
+            sequence_num: self.get_next_seq_num()
+        })
+    }
+
+    fn send_to(&mut self, msg: M, recipient: NodeId) -> Result<(), MulticastError> where M: Serialize { 
+        self.basic.send_to(ReliableNetworkMessage { msg, sequence_num: None, forwarded_for: None}, recipient)
+    }
+
+    async fn deliver(&mut self) -> Result<M, MulticastError> where M: Send + Serialize { 
+        let member_state = match self.basic.raw_deliver().await {
+            Some(s) => s,
+            None => return Err(MulticastError::AllClientsDisconnected)
+        };
 
         match member_state.msg {
             MemberStateMessageType::Message(mut msg) => {
                 if msg.sequence_num.is_none() {
                     trace!("network message from node {} ... one off message", member_state.member_id);
                     
-                    return MemberStateMessage {
-                        msg: MemberStateMessageType::Message(msg.msg),
-                        member_id: member_state.member_id
-                    };
+                    return Ok(msg.msg);
                 }
     
                 let msg_seq_num = msg.sequence_num.unwrap();
@@ -93,33 +102,21 @@ impl<M> ReliableMulticast<M> {
                 if let Some(last_seq) = self.prior_seq.get(&original_sender) {
                     if last_seq >= &msg_seq_num {
                         trace!("network message from node {} ... skipping ... last_seq={} and msg.sequence_num={}", member_state.member_id, last_seq, msg_seq_num);
-                        return MemberStateMessage {
-                            msg: MemberStateMessageType::DuplicateMessage,
-                            member_id: original_sender
-                        }
+                        
+                        // got a duplicated message, skip and wait --> recurse!
+                        return self.deliver().await; 
                     }
                 }
     
-                trace!("network message from node {} ... got {:?}", member_state.member_id, msg);
+                trace!("network message from node {} ... got ReliableNetworkMessage {{ msg: (...), sequence_num: {:?}, forwarded_for: {:?}}}", member_state.member_id, msg.sequence_num, msg.forwarded_for);
     
                 self.prior_seq.insert(original_sender, msg_seq_num);
                 msg.forwarded_for = Some(original_sender);
-    
-                self.basic.broadcast(&msg, Some(except));
-                
-                return MemberStateMessage {
-                    msg: MemberStateMessageType::Message(msg.msg),
-                    member_id: member_state.member_id
-                };
+                self.basic.broadcast_except(unsafe { std::ptr::read(&mut msg) }, except);
+
+                Ok(msg.msg)
             },
-            MemberStateMessageType::DuplicateMessage => MemberStateMessage {
-                msg: MemberStateMessageType::DuplicateMessage,
-                member_id: member_state.member_id
-            },
-            MemberStateMessageType::NetworkError => MemberStateMessage {
-                msg: MemberStateMessageType::NetworkError,
-                member_id: member_state.member_id
-            },
+            MemberStateMessageType::NetworkError => Err(MulticastError::ClientDisconnected(member_state.member_id))
         }
     }
 }

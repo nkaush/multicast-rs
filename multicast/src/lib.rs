@@ -20,21 +20,24 @@ pub use basic::BasicMulticast;
 
 use async_trait::async_trait;
 use serde::Serialize;
-use std::fmt;
 
-pub struct MulticastError {
-
+pub enum MulticastError {
+    RebroadcastError(Vec<NodeId>),
+    BroadcastError(Vec<NodeId>),
+    InvalidRecipient(NodeId),
+    ClientDisconnected(NodeId),
+    AllClientsDisconnected
 }
 
 #[async_trait]
-pub trait Multicast<M> {
+pub trait Multicast<M> where M: Serialize {
     fn connect(node_id: NodeId, configuration: Config) -> Self;
 
     fn connect_timeout(node_id: NodeId, configuration: Config, timeout_secs: u64) -> Self;
 
-    fn broadcast(&mut self, msg: M) where M: fmt::Debug + Serialize;
+    fn broadcast(&mut self, msg: M) -> Result<(), MulticastError>;
 
-    fn send_to(&mut self, msg: &M, recipient: &NodeId) where M: fmt::Debug + Serialize;
+    fn send_to(&mut self, msg: M, recipient: NodeId) -> Result<(), MulticastError>;
 
-    async fn deliver(&mut self) -> Result<M, MulticastError>;
+    async fn deliver(&mut self) -> Result<M, MulticastError> where M: Send;
 }

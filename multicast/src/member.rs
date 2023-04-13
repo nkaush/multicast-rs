@@ -13,7 +13,6 @@ use std::fmt;
 #[derive(Debug)]
 pub enum MemberStateMessageType<M> {
     Message(M),
-    DuplicateMessage,
     NetworkError
 }
 
