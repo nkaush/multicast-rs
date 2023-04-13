@@ -1,6 +1,7 @@
 use fault_tolerant_atm::{Bank, Cli, TotalOrderedMulticast, parse_config};
-use multicast::{Config, NodeId};
+use multicast::{Config, NodeId, Multicast};
 use tokio::select;
+use log::error;
 
 #[tokio::main]
 async fn main() {
@@ -19,13 +20,24 @@ async fn main() {
         }
     };
 
-    let (mut bank, bank_snd) = Bank::new().await;
-    let (mut multicast, multicast_snd) = TotalOrderedMulticast::new(node_id, &config, bank_snd).await;
-    let mut cli = Cli::new(node_id, multicast_snd);
+    let mut bank = Bank::new().await;
+    let mut multicast = TotalOrderedMulticast::connect(node_id, config, 60).await;
+    let mut cli = Cli::new(node_id);
 
-    select! {
-        _ = cli.taking_input() => (),
-        _ = multicast.main_loop() => (),
-        _ = bank.main_loop() => ()
-    };
+    loop {
+        select! {
+            input = cli.parse_input() => match input {
+                Some(transaction) => {
+                    if let Err(e) = multicast.broadcast(transaction).await {
+                        error!("broadcase error: {e:?}")
+                    }
+                },
+                None => break
+            },
+            delivery = multicast.deliver() => match delivery {
+                Ok(msg) => bank.process_transaction(msg).await,
+                Err(e) => error!("Delivery failure: {e:?}")
+            }
+        }
+    }
 }

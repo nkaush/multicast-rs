@@ -3,7 +3,7 @@ use super::{
     config::{Config, NodeId}, basic::BasicMulticast, MulticastGroup
 };
 use std::collections::{HashSet, HashMap};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use async_trait::async_trait;
 use log::trace;
 
@@ -57,24 +57,28 @@ impl<M> ReliableMulticast<M> {
 }
 
 #[async_trait]
-impl<M> Multicast<M> for ReliableMulticast<M> where M: Serialize {
-    fn connect(_: usize, _: Config) -> Self { todo!() }
+impl<M> Multicast<M> for ReliableMulticast<M> where M: Send + Serialize {
+    async fn connect(_: usize, _: Config, _: u64) -> Self where M: 'static + DeserializeOwned { todo!() }
 
-    fn connect_timeout(_: usize, _: Config, _: u64) -> Self { todo!() }
-
-    fn broadcast(&mut self, msg: M) -> Result<(), MulticastError> where M: Serialize { 
+    async fn broadcast(&mut self, msg: M) -> Result<(), MulticastError> { 
+        let sequence_num = self.get_next_seq_num();
         self.basic.broadcast(ReliableNetworkMessage {
             msg,
             forwarded_for: None,
-            sequence_num: self.get_next_seq_num()
-        })
+            sequence_num
+        }).await
     }
 
-    fn send_to(&mut self, msg: M, recipient: NodeId) -> Result<(), MulticastError> where M: Serialize { 
-        self.basic.send_to(ReliableNetworkMessage { msg, sequence_num: None, forwarded_for: None}, recipient)
+    async fn send_to(&mut self, msg: M, recipient: NodeId) -> Result<(), MulticastError> { 
+        self.basic.send_to(
+            ReliableNetworkMessage { 
+                msg, sequence_num: None, forwarded_for: None
+            }, 
+            recipient
+        ).await
     }
 
-    async fn deliver(&mut self) -> Result<M, MulticastError> where M: Send + Serialize { 
+    async fn deliver(&mut self) -> Result<M, MulticastError> { 
         let member_state = match self.basic.raw_deliver().await {
             Some(s) => s,
             None => return Err(MulticastError::AllClientsDisconnected)
@@ -112,9 +116,9 @@ impl<M> Multicast<M> for ReliableMulticast<M> where M: Serialize {
     
                 self.prior_seq.insert(original_sender, msg_seq_num);
                 msg.forwarded_for = Some(original_sender);
-                self.basic.broadcast_except(unsafe { std::ptr::read(&mut msg) }, except);
-
-                Ok(msg.msg)
+                self.basic
+                    .broadcast_except(msg, except)
+                    .map(|m| m.msg)
             },
             MemberStateMessageType::NetworkError => Err(MulticastError::ClientDisconnected(member_state.member_id))
         }

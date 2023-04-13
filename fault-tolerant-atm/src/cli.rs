@@ -1,21 +1,22 @@
 use crate::{Transaction, TransactionType};
 use tokio_util::codec::{FramedRead, LinesCodec};
-use tokio::sync::mpsc::{UnboundedSender};
+use async_recursion::async_recursion;
 use futures::stream::StreamExt;
 use multicast::NodeId;
+use tokio::io::Stdin;
 
 pub struct Cli {
-    cli_send: UnboundedSender<Transaction>,
+    stdin: FramedRead<Stdin, LinesCodec>,
     next_local_tx_id: usize,
     node_id: NodeId
 }
 
 impl Cli {
-    pub fn new(node_id: NodeId, cli_send: UnboundedSender<Transaction>) -> Self {
+    pub fn new(node_id: NodeId) -> Self {
         Self {
             next_local_tx_id: 0,
             node_id,
-            cli_send,
+            stdin: FramedRead::new(tokio::io::stdin(), LinesCodec::new()),
         }
     }
 
@@ -39,30 +40,35 @@ impl Cli {
         }
     }
 
-    pub async fn taking_input(&mut self) {
-        let mut stdin = FramedRead::new(tokio::io::stdin(), LinesCodec::new());
-        while let Some(Ok(line)) = stdin.next().await {
-            let delimited: Vec <_> = line
-                .trim()
-                .split_ascii_whitespace()
-                .filter(|term| term.len() > 0)
-                .collect();
+    #[async_recursion]
+    pub async fn parse_input(&mut self) -> Option<Transaction> {
+        let input = match self.stdin.next().await {
+            Some(Ok(i)) => i,
+            _ => return None
+        };
 
-            match delimited[..] {
-                ["DEPOSIT", account, amt] => {
-                    if let Ok(amount) = amt.parse() {
-                        let tx = self.new_deposit(account, amount);
-                        self.cli_send.send(tx).unwrap()
-                    }
-                },
-                ["TRANSFER", from, "->", to, amt] => {
-                    if let Ok(amount) = amt.parse() {
-                        let tx = self.new_transfer(from, to, amount);
-                        self.cli_send.send(tx).unwrap();
-                    }
-                },
-                _ => ()
-            }
+        let delimited: Vec <_> = input
+            .trim()
+            .split_ascii_whitespace()
+            .filter(|term| term.len() > 0)
+            .collect();
+
+        match delimited[..] {
+            ["DEPOSIT", account, amt] => {
+                if let Ok(amount) = amt.parse() {
+                    Some(self.new_deposit(account, amount))
+                } else {
+                    self.parse_input().await
+                }
+            },
+            ["TRANSFER", from, "->", to, amt] => {
+                if let Ok(amount) = amt.parse() {
+                    Some(self.new_transfer(from, to, amount))
+                } else {
+                    self.parse_input().await
+                }
+            },
+            _ => self.parse_input().await
         }
     }
 }

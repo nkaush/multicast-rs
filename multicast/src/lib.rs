@@ -5,6 +5,7 @@ mod reliable;
 mod config;
 mod member;
 mod basic;
+mod pipe;
 
 use member::{MulticastMemberHandle, MemberStateMessage};
 pub use config::{Config, NodeId, parse_config};
@@ -18,26 +19,26 @@ pub use total_order::TotalOrderedMulticast;
 pub use reliable::ReliableMulticast;
 pub use basic::BasicMulticast;
 
+use serde::{Serialize, de::DeserializeOwned};
 use async_trait::async_trait;
-use serde::Serialize;
 
+#[derive(Debug)]
 pub enum MulticastError {
-    RebroadcastError(Vec<NodeId>),
     BroadcastError(Vec<NodeId>),
     InvalidRecipient(NodeId),
     ClientDisconnected(NodeId),
-    AllClientsDisconnected
+    AllClientsDisconnected,
+    InternalError
 }
 
 #[async_trait]
-pub trait Multicast<M> where M: Serialize {
-    fn connect(node_id: NodeId, configuration: Config) -> Self;
+pub trait Multicast<M> where M: Send + Serialize {
+    async fn connect(node_id: NodeId, configuration: Config, timeout_secs: u64) 
+        -> Self where M: 'static + Serialize + Send + DeserializeOwned;
 
-    fn connect_timeout(node_id: NodeId, configuration: Config, timeout_secs: u64) -> Self;
+    async fn broadcast(&mut self, msg: M) -> Result<(), MulticastError>;
 
-    fn broadcast(&mut self, msg: M) -> Result<(), MulticastError>;
+    async fn send_to(&mut self, msg: M, recipient: NodeId) -> Result<(), MulticastError>;
 
-    fn send_to(&mut self, msg: M, recipient: NodeId) -> Result<(), MulticastError>;
-
-    async fn deliver(&mut self) -> Result<M, MulticastError> where M: Send;
+    async fn deliver(&mut self) -> Result<M, MulticastError>;
 }

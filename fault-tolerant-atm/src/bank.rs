@@ -1,7 +1,4 @@
-use tokio::{
-    sync::mpsc::{UnboundedSender, UnboundedReceiver, unbounded_channel},
-    io::AsyncWriteExt, fs::File
-};
+use tokio::{io::AsyncWriteExt, fs::File};
 use serde::{Serialize, Deserialize};
 use std::collections::BTreeMap;
 use multicast::NodeId;
@@ -23,20 +20,16 @@ pub struct Transaction {
 }
 
 pub struct Bank {
-    rcv: UnboundedReceiver<Transaction>,
     accounts: BTreeMap<String, usize>,
     latency_log: File
 }
 
 impl Bank {
-    pub async fn new() -> (Self, UnboundedSender<Transaction>) {
-        let (snd, rcv) = unbounded_channel();
-        let this = Self {
-            rcv,
+    pub async fn new() -> Self {
+        Self {
             accounts: BTreeMap::new(),
             latency_log: File::create("latencies.log").await.unwrap()
-        };
-        (this, snd)
+        }
     }
 
     async fn log_latency(&mut self, tx: &Transaction) {
@@ -55,28 +48,26 @@ impl Bank {
         println!("");
     }
 
-    pub async fn main_loop(&mut self) {
-        while let Some(sample) = self.rcv.recv().await {
-            self.log_latency(&sample).await;
-            match sample.tr {
-                TransactionType::Deposit(person, amt) => {
-                    trace!("DEPOSIT {} {}", person, amt);
-                    self.accounts.entry(person).and_modify(|curr| *curr += amt).or_insert(amt); 
-                },
-                TransactionType::Transfer(person1, person2, amt) => {
-                    match self.accounts.get(&person1) {
-                        Some(balance1) => if balance1 >= &amt { 
-                            trace!("TRANSFER {} -> {} {}", person1, person2, amt);
-                            self.accounts.entry(person1).and_modify(|curr| *curr -= amt);
-                            self.accounts.entry(person2).and_modify(|curr| *curr += amt).or_insert(amt);
-                        },
-                        None => ()
-                    }
+    pub async fn process_transaction(&mut self, tx: Transaction) {
+        self.log_latency(&tx).await;
+        match tx.tr {
+            TransactionType::Deposit(person, amt) => {
+                trace!("DEPOSIT {} {}", person, amt);
+                self.accounts.entry(person).and_modify(|curr| *curr += amt).or_insert(amt); 
+            },
+            TransactionType::Transfer(person1, person2, amt) => {
+                match self.accounts.get(&person1) {
+                    Some(balance1) => if balance1 >= &amt { 
+                        trace!("TRANSFER {} -> {} {}", person1, person2, amt);
+                        self.accounts.entry(person1).and_modify(|curr| *curr -= amt);
+                        self.accounts.entry(person2).and_modify(|curr| *curr += amt).or_insert(amt);
+                    },
+                    None => ()
                 }
             }
-
-            self.print_balances();
         }
+
+        self.print_balances();
     }
 }
 

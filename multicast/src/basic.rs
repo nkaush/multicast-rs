@@ -5,7 +5,7 @@ use super::{
 use std::collections::HashSet;
 use async_trait::async_trait;
 use log::{error, trace};
-use serde::Serialize;
+use serde::{Serialize, de::DeserializeOwned};
 
 pub struct BasicMulticast<M> {
     group: MulticastGroup,
@@ -55,12 +55,12 @@ impl<M> BasicMulticast<M> {
 }
 
 #[async_trait]
-impl<M> Multicast<M> for BasicMulticast<M> where M: Serialize {
-    fn connect(_: usize, _: Config) -> Self { todo!() }
+impl<M> Multicast<M> for BasicMulticast<M> where M: Send + Serialize {
+    async fn connect(_: usize, _: Config, _: u64) -> Self where M: 'static + DeserializeOwned {
+        todo!() 
+    }
 
-    fn connect_timeout(_: usize, _: Config, _: u64) -> Self { todo!() }
-
-    fn broadcast(&mut self, msg: M) -> Result<(), MulticastError> { 
+    async fn broadcast(&mut self, msg: M) -> Result<(), MulticastError> { 
         let to_send = bincode::serialize(&msg).unwrap();
         let mut failures = Vec::new();
 
@@ -79,7 +79,7 @@ impl<M> Multicast<M> for BasicMulticast<M> where M: Serialize {
         }
     }
 
-    fn send_to(&mut self, msg: M, recipient: NodeId) -> Result<(), MulticastError> { 
+    async fn send_to(&mut self, msg: M, recipient: NodeId) -> Result<(), MulticastError> { 
         if let Some(handle) = self.group.get(&recipient) {
             let to_send = bincode::serialize(&msg).unwrap();
             trace!("Sending message to {}: [...{} bytes...]", handle.member_id, to_send.len());
@@ -95,7 +95,7 @@ impl<M> Multicast<M> for BasicMulticast<M> where M: Serialize {
         }
     }
 
-    async fn deliver(&mut self) -> Result<M, MulticastError> where M: Send { 
+    async fn deliver(&mut self) -> Result<M, MulticastError> { 
         use super::member::MemberStateMessageType::*;
         use MulticastError::*;
 

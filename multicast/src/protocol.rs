@@ -6,7 +6,8 @@ use super::NodeId;
 pub enum TotalOrderNetworkMessage<M> {
     PriorityRequest(PriorityRequestArgs<M>),
     PriorityProposal(PriorityProposalArgs),
-    PriorityMessage(PriorityMessageArgs)
+    PriorityMessage(PriorityMessageArgs),
+    DirectMessage(M)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

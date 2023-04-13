@@ -7,7 +7,6 @@ use serde::{de::DeserializeOwned, Serialize};
 use tokio_util::codec::LengthDelimitedCodec;
 use futures::{stream::StreamExt, SinkExt};
 use log::{trace, error};
-use std::fmt;
 
 /// Represents any message types a member handler thread could send the multicast engine
 #[derive(Debug)]
@@ -66,7 +65,7 @@ impl<M> MulticastMemberData<M> {
     }
 }
 
-pub(super) async fn member_loop<M>(socket: TcpStream, mut member_data: MulticastMemberData<M>) where M: DeserializeOwned + Serialize + fmt::Debug {
+pub(super) async fn member_loop<M>(socket: TcpStream, mut member_data: MulticastMemberData<M>) where M: 'static + DeserializeOwned + Serialize {
     let mut stream = LengthDelimitedCodec::builder()
         .length_field_type::<u32>()
         .new_framed(socket);
@@ -76,7 +75,7 @@ pub(super) async fn member_loop<M>(socket: TcpStream, mut member_data: Multicast
             Some(to_send) = member_data.from_engine.recv() => {
                 let bytes = bincode::serialize(&to_send).unwrap();
                 if stream.send(bytes.into()).await.is_err() {
-                    member_data.notify_network_error().unwrap();
+                    member_data.notify_network_error();
                     break;
                 }
             },
@@ -89,10 +88,10 @@ pub(super) async fn member_loop<M>(socket: TcpStream, mut member_data: Multicast
                             continue
                         }
                     };
-                    member_data.notify_client_message(msg).unwrap();
+                    member_data.notify_client_message(msg);
                 },
                 _ => {
-                    member_data.notify_network_error().unwrap();
+                    member_data.notify_network_error();
                     break;
                 }
             }

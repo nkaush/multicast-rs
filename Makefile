@@ -5,12 +5,12 @@ $(warning - Or visit https://www.rust-lang.org/tools/install for more on install
 $(error Unable to invoke cargo)
 endif
 
-.PHONY: mp1_node clean
+.PHONY: fault-tolerant-atm clean
 
-mp1_node:
+fault-tolerant-atm:
 	cargo build --release
-	cp target/release/mp1_node ./mp1_node
+	cp target/release/fault-tolerant-atm ./ft-atm
 
 clean:
 	cargo clean
-	rm -f mp1_node Cargo.lock
+	rm -f fault-tolerant-atm Cargo.lock

@@ -4,17 +4,18 @@ use super::{
 };
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
-    io::{AsyncWriteExt, AsyncBufReadExt, BufStream},
-    net::{TcpStream, TcpListener}, select, time::timeout
+    io::{AsyncWriteExt, AsyncBufReadExt, BufStream}, time::timeout,
+    net::{TcpStream, TcpListener}, select, 
 };
 use tokio_retry::{Retry, strategy::FixedInterval};
-use std::{net::SocketAddr, fmt, time::Duration};
 use serde::{Serialize, de::DeserializeOwned};
+use std::{net::SocketAddr, time::Duration};
 use log::{trace, error};
 
 pub(super) struct ConnectionPool<M> {
     pub group: MulticastGroup,
     pub node_id: NodeId,
+    timeout_secs: Option<u64>,
     pub from_members: UnboundedReceiver<MemberStateMessage<M>>,
     pub client_snd_handle: UnboundedSender<MemberStateMessage<M>>
 }
@@ -29,9 +30,15 @@ impl<M> ConnectionPool<M> {
         Self {
             group: Default::default(),
             node_id,
+            timeout_secs: None,
             from_members: from_clients,
             client_snd_handle
         }
+    }
+
+    pub(super) fn with_timeout(mut self, secs: u64) -> Self {
+        self.timeout_secs = Some(secs);
+        self
     }
 
     async fn connect_to_node(this_node: NodeId, node_id: NodeId, host: String, port: u16, stream_snd: UnboundedSender<(TcpStream, NodeId)>) {
@@ -55,7 +62,7 @@ impl<M> ConnectionPool<M> {
         }
     }
 
-    fn admit_member(&mut self, socket: TcpStream, member_id: NodeId) where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
+    fn admit_member(&mut self, socket: TcpStream, member_id: NodeId) where M: 'static + Send + Serialize + DeserializeOwned {
         let (to_client, from_engine) = unbounded_channel();
         let member_data = MulticastMemberData {
             member_id: member_id,
@@ -71,7 +78,7 @@ impl<M> ConnectionPool<M> {
         });
     }
 
-    async fn priv_connect(mut self, config: &Config) -> Self where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
+    async fn priv_connect(mut self, config: &Config) -> Self where M: 'static + Send + Serialize + DeserializeOwned {
         let node_config = config.get(self.node_id).unwrap();
 
         let bind_addr: SocketAddr = ([0, 0, 0, 0], node_config.port).into();
@@ -84,21 +91,23 @@ impl<M> ConnectionPool<M> {
         };
 
         let (stream_snd, mut stream_rcv) = unbounded_channel();
-
         for node in Config::get_connection_list(self.node_id) {
-            let connect_config = config.get(node).unwrap();
+            let connect_config = config.get(node).cloned().unwrap();
             let snd_clone = stream_snd.clone();
-            tokio::spawn(Self::connect_to_node(
-                self.node_id, 
-                node, 
-                connect_config.hostname.clone(), 
-                connect_config.port, 
-                snd_clone
-            ));
+            let this_node = self.node_id;
+            tokio::spawn(async move {
+                ConnectionPool::<M>::connect_to_node(
+                    this_node, 
+                    node, 
+                    connect_config.hostname, 
+                    connect_config.port, 
+                    snd_clone
+                ).await
+            });
         }
         drop(stream_snd);
         
-        loop {
+        let out = loop {
             select! {
                 client = tcp_listener.accept() => match client {
                     Ok((stream, _addr)) => {
@@ -128,11 +137,16 @@ impl<M> ConnectionPool<M> {
                     if self.group.len() == config.len() - 1 { break self; }
                 }
             }
-        } 
+        };
+
+        out
     }
 
-    pub(super) async fn connect(self, config: &Config) -> Self where M: 'static + Send + Serialize + DeserializeOwned + fmt::Debug {
-        let time_limit = Duration::from_secs(CONNECTION_POOL_INIT_TIMEOUT_SECS);
+    pub(super) async fn connect(self, config: &Config) -> Self where M: 'static + Send + Serialize + DeserializeOwned {
+        let time_limit = match self.timeout_secs {
+            Some(s) => Duration::from_secs(s),
+            None => Duration::from_secs(CONNECTION_POOL_INIT_TIMEOUT_SECS)
+        };
         match timeout(time_limit, self.priv_connect(config)).await {
             Ok(p) => p,
             Err(_) => {
