@@ -459,7 +459,7 @@ impl<M> Multicast<M> for TotalOrderedMulticast<M> where M: Send + Serialize {
 
     async fn send_to(&mut self, msg: M, recipient: NodeId) -> Result<(), MulticastError> where M: Serialize { 
         self.send_queue.send((msg, recipient)).unwrap();
-        self.broadcast_queue.recv().await.unwrap()
+        self.send_queue.recv().await.unwrap()
     }
 
     async fn deliver(&mut self) -> Result<M, MulticastError> where M: Send + Serialize { 
